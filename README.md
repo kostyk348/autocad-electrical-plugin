@@ -11,10 +11,33 @@ C#-плагин для AutoCAD 2024: топология электрически
 
 ## Установка
 
-1. Соберите Release (см. «Сборка») или возьмите готовый `bin/plugin/El.Plugin.dll`.
+### Способ 1 — автозагрузка (bundle, рекомендуется)
+
+1. Скачайте релиз `El.Plugin.2024.bundle.zip` со страницы Releases.
+2. Распакуйте — получится папка `El.Plugin.2024.bundle/`.
+3. Скопируйте её в `%APPDATA%\Autodesk\ApplicationPlugins\`.
+4. Запустите AutoCAD 2024 — плагин загрузится сам (вкладка
+   «Электроавтоматика», контекстные меню, палитра).
+
+### Способ 2 — вручную (NETLOAD)
+
+1. Соберите Release (см. «Сборка») или возьмите `bin/plugin/`
+   из релиза (`El.Plugin.dll` + `El.Core.dll` — обе обязательны).
 2. В AutoCAD 2024: команда `NETLOAD` → выберите `El.Plugin.dll`.
-3. Готово: вкладка **«Электроавтоматика»** на ленте, контекстные меню,
-   палитра `EL-PALETTE`.
+
+### AutoCAD 2014
+
+LISP-инструменты (el-tools/omni) полностью работают в 2014 — берите
+CP1251-версии из их релизов. **C#-плагин под 2014** собирается из
+исходников после установки AutoCAD 2014 (managed API DLL берутся из его
+папки, отдельно не распространяются):
+
+```
+dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release ^
+    -p:Acad2014Path="C:\Program Files\Autodesk\AutoCAD 2014"
+```
+
+Результат — `bin/plugin-2014/El.Plugin.2014.dll` (net45, единый код с 2024).
 
 > Требуется El.Core.dll рядом с El.Plugin.dll (копируется в bin/plugin).
 

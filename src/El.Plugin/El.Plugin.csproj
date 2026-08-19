@@ -53,7 +53,7 @@
 
   <!-- копирование результата в папку bin\plugin при сборке -->
   <Target Name="CopyPlugin" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\bin\plugin" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)El.Core.dll" DestinationFolder="$(MSBuildProjectDirectory)\..\..\bin\plugin" />
   </Target>
 
 </Project>
