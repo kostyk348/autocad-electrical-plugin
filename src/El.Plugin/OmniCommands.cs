@@ -44,8 +44,9 @@ namespace El.Plugin
             {
                 var doc = DwgAccess.Doc;
                 var db = doc.Database;
-                var msg = Ed.GetString(new PromptStringOptions("\n[OMNI] Описание изменения (или Enter): ") { AllowSpaces = true }).StringResult;
-                if (msg == null) msg = "";
+                var dlg = new El.Plugin.Ui.InputDialog("OMNI — слепок", "Описание изменения:");
+                if (dlg.Show() != System.Windows.Forms.DialogResult.OK) return;
+                string msg = dlg.Value;
 
                 string src = db.Filename;
                 if (string.IsNullOrEmpty(src)) { Ed.WriteMessage("\n[OMNI] Файл не сохранён — сначала QSAVE."); return; }
@@ -70,13 +71,16 @@ namespace El.Plugin
             {
                 var files = SnapshotFiles();
                 if (files.Count == 0) { Ed.WriteMessage("\n[OMNI] Слепков нет. Сначала OMNI-SNAP."); return; }
-                Ed.WriteMessage("\n--- Слепки OMNI ---");
-                for (int i = 0; i < files.Count; i++)
-                    Ed.WriteMessage($"\n[{i + 1}] {Path.GetFileName(files[i])}");
-                var pi = Ed.GetInteger(new PromptIntegerOptions("\n[OMNI] Номер для открытия (0 — отмена): ") { AllowNegative = false });
-                if (pi.Status == PromptStatus.OK && pi.Value > 0 && pi.Value <= files.Count)
+                var dlg = new El.Plugin.Ui.OmniLogDialog(files);
+                if (dlg.Show() != System.Windows.Forms.DialogResult.OK || dlg.SelectedFile == null) return;
+                if (dlg.Action == "open")
                 {
-                    Application.DocumentManager.Open(files[pi.Value - 1]);
+                    Application.DocumentManager.Open(dlg.SelectedFile);
+                }
+                else if (dlg.Action == "delete")
+                {
+                    try { System.IO.File.Delete(dlg.SelectedFile); Ed.WriteMessage("\n[OMNI] Слепок удалён."); }
+                    catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] Ошибка удаления: " + ex.Message); }
                 }
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] LOG: " + ex.Message); }
@@ -90,16 +94,15 @@ namespace El.Plugin
             {
                 var files = SnapshotFiles();
                 if (files.Count == 0) { Ed.WriteMessage("\n[OMNI] Слепков нет."); return; }
-                Ed.WriteMessage("\n--- Для сравнения ---");
-                for (int i = 0; i < files.Count; i++)
-                    Ed.WriteMessage($"\n[{i + 1}] {Path.GetFileName(files[i])}");
-                var pi = Ed.GetInteger(new PromptIntegerOptions("\n[OMNI] Номер ревизии (0 — отмена): ") { AllowNegative = false });
-                if (pi.Status != PromptStatus.OK || pi.Value <= 0 || pi.Value > files.Count) return;
-
+                var names = files.Select(f => System.IO.Path.GetFileName(f)).ToList();
+                var dlg = new El.Plugin.Ui.ListPickDialog("OMNI — сравнение", "Ревизия для наложения:", names);
+                if (dlg.Show() != System.Windows.Forms.DialogResult.OK || dlg.Selected == null) return;
+                int idx = names.IndexOf(dlg.Selected);
+                if (idx < 0) return;
+                string snap = files[idx];
+                string blockName = Path.GetFileNameWithoutExtension(snap);
                 var doc = DwgAccess.Doc;
                 var db = doc.Database;
-                string snap = files[pi.Value - 1];
-                string blockName = Path.GetFileNameWithoutExtension(snap);
 
                 using (var tr = db.TransactionManager.StartTransaction())
                 {

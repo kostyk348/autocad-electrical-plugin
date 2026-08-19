@@ -80,11 +80,9 @@ namespace El.Plugin
             {
                 var names = ListLayers(out var ids);
                 if (names.Count == 0) { Ed.WriteMessage("\n! Слоёв нет."); return; }
-                for (int i = 0; i < names.Count; i++)
-                    Ed.WriteMessage($"\n[{i + 1}] {names[i]}");
-                var pi = Ed.GetInteger(new PromptIntegerOptions($"\nНомер слоя (1-{names.Count}, 0 — отмена): ") { AllowNegative = false });
-                if (pi.Status != PromptStatus.OK || pi.Value <= 0 || pi.Value > names.Count) return;
-                string target = names[pi.Value - 1];
+                var pick = new El.Plugin.Ui.ListPickDialog("Покраска слоя", "Слой:", names);
+                if (pick.Show() != System.Windows.Forms.DialogResult.OK || pick.Selected == null) return;
+                string target = pick.Selected;
                 var ci = Ed.GetInteger(new PromptIntegerOptions("\nЦвет (ACI 1-255): ") { AllowNegative = false });
                 if (ci.Status != PromptStatus.OK) return;
                 short color = (short)Math.Max(1, Math.Min(255, ci.Value));
@@ -117,16 +115,18 @@ namespace El.Plugin
 
                 string target = null;
                 var names = ListLayers(out _);
-                Ed.WriteMessage("\nСуществующие слои:");
-                for (int i = 0; i < names.Count; i++)
-                    Ed.WriteMessage($"\n[{i + 1}] {names[i]}");
-                var n = Ed.GetString(new PromptStringOptions("\nИмя слоя (или номер из списка, Enter — отмена): ") { AllowSpaces = true }).StringResult;
-                if (string.IsNullOrEmpty(n)) return;
-                n = n.Trim();
-                if (int.TryParse(n, out int idx) && idx >= 1 && idx <= names.Count)
-                    target = names[idx - 1];
+                var pick = new El.Plugin.Ui.ListPickDialog("Перенос на слой",
+                    "Выберите существующий слой (или закройте — введёте новый):", names);
+                if (pick.Show() == System.Windows.Forms.DialogResult.OK && pick.Selected != null)
+                {
+                    target = pick.Selected;
+                }
                 else
-                    target = n;
+                {
+                    var n = Ed.GetString(new PromptStringOptions("\nИмя нового слоя (Enter — отмена): ") { AllowSpaces = true }).StringResult;
+                    if (string.IsNullOrEmpty(n)) return;
+                    target = n.Trim();
+                }
 
                 using (var tr = DwgAccess.Doc.Database.TransactionManager.StartTransaction())
                 {

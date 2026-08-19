@@ -59,8 +59,24 @@ namespace El.Plugin
                 if (counts.Count == 0) { Ed.WriteMessage("\n! Блоки не найдены."); return; }
 
                 Ed.WriteMessage($"\n--- ВСЕГО: {counts.Count} типов блоков, {counts.Values.Sum()} вхождений ---");
-                foreach (var kv in counts)
-                    Ed.WriteMessage($"\n  {kv.Key}: {kv.Value} шт");
+                var bomDlg = new El.Plugin.Ui.BomDialog(counts.ToList());
+                var dr = bomDlg.Show();
+                if (dr == System.Windows.Forms.DialogResult.Cancel) return;
+                if (bomDlg.ExportCsv)
+                {
+                    var csvDlg = new System.Windows.Forms.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "bom.csv" };
+                    if (csvDlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine("Блок;Слой;Кол-во");
+                        foreach (var kv in counts)
+                            sb.AppendLine($"{kv.Key};{layerOf[kv.Key]};{kv.Value}");
+                        System.IO.File.WriteAllText(csvDlg.FileName, sb.ToString(), new UTF8Encoding(true));
+                        Ed.WriteMessage($"\n; BOM сохранён: {csvDlg.FileName}");
+                    }
+                    return;
+                }
+                if (!bomDlg.InsertTable) return;
 
                 var pp = Ed.GetPoint("\nТочка вставки таблицы (Enter — без таблицы): ");
                 if (pp.Status == PromptStatus.OK)
@@ -95,16 +111,13 @@ namespace El.Plugin
                 if (pr.Status != PromptStatus.OK) return;
                 var blockId = pr.ObjectId;
 
-                // запросы значений
-                var all = Ed.GetInteger(new PromptIntegerOptions("\nЛист №") { AllowNegative = false, AllowZero = false });
-                if (all.Status != PromptStatus.OK) return;
-                int sheet = all.Value;
-                var tot = Ed.GetInteger(new PromptIntegerOptions("\nВсего листов") { AllowNegative = false });
-                int total = tot.Status == PromptStatus.OK ? tot.Value : 1;
-                var date = Ed.GetString(new PromptStringOptions($"\nДата (Enter — {DateTime.Now:dd.MM.yyyy}): ") { AllowSpaces = true });
-                string dateStr = string.IsNullOrEmpty(date.StringResult) ? DateTime.Now.ToString("dd.MM.yyyy") : date.StringResult;
-                var name = Ed.GetString(new PromptStringOptions("\nОбозначение (Enter — пропустить): ") { AllowSpaces = true });
-                string design = name.StringResult;
+                // запросы значений в диалоге
+                var tbd = new El.Plugin.Ui.TitleBlockDialog(DateTime.Now.ToString("dd.MM.yyyy"));
+                if (tbd.Show() != System.Windows.Forms.DialogResult.OK) return;
+                int sheet = tbd.Sheet;
+                int total = tbd.Total;
+                string dateStr = tbd.Date;
+                string design = tbd.Design;
 
                 int updated = 0;
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
