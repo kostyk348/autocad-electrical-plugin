@@ -41,6 +41,26 @@ namespace El.Plugin
         private static Editor Ed => DwgAccess.Ed;
 
         // ============================================================
+        // EL-GRAPH (отладка)
+        // ============================================================
+        [CommandMethod("EL-GRAPH")]
+        public static void ElGraph()
+        {
+            try
+            {
+                CommandState.Refresh();
+                if (CommandState.Graph == null) { Ed.WriteMessage("\n! Мало LINE"); return; }
+                Ed.WriteMessage($"\n--- EL-GRAPH: {CommandState.Lines.Count} линий, {CommandState.Chains.Count} цепей ---");
+                for (int i = 0; i < CommandState.Chains.Count; i++)
+                {
+                    var texts = ChainTexts.NearEnds(CommandState.Graph, CommandState.Chains[i], CommandState.Texts, DwgAccess.DefaultTextRadius);
+                    Ed.WriteMessage($"\n  #{i + 1}: {CommandState.Chains[i].Count} линий [{string.Join(" ", texts)}]");
+                }
+            }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-GRAPH: " + ex.Message); }
+        }
+
+        // ============================================================
         // EL-TRACE
         // ============================================================
         [CommandMethod("EL-TRACE")]
