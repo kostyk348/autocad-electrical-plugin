@@ -68,6 +68,14 @@ namespace El.Plugin.Ui
                 MakeButton("Номера цепей", "EL-AUTOTAG", "Номера выбранных цепей (без префикса)"),
                 MakeButton("Объединить в полилинии", "EL-JOIN", "LINE → полилинии, контроль порядка")));
 
+            _tab.Panels.Add(MakePanel("Слои",
+                MakeButton("Фильтр анализа", "EL-LAYER-FILTER", "Какие слои видит EL-CHECK/EL-TABLE/EL-TRACE"),
+                MakeButton("Создать слой", "EL-LAYER-NEW", "Имя + цвет"),
+                MakeButton("Покрасить слой", "EL-LAYER-COLOR", "Цвет слоя"),
+                MakeButton("Перенести на слой", "EL-LAYER-MOVE", "Выбранные объекты → слой"),
+                MakeButton("Статистика слоёв", "EL-LAYER-STATS", "Объекты/LINE по слоям, пустые слои"),
+                MakeButton("Цепи по слоям", "EL-LAYER-CHAINS", "Кластеризация: цепи в разрезе слоёв")));
+
             _tab.Panels.Add(MakePanel("OMNI (версии)",
                 MakeButton("Слепок", "OMNI-SNAP", "Копия DWG в _OMNI_HISTORY"),
                 MakeButton("Список", "OMNI-LOG", "Открыть ревизию"),

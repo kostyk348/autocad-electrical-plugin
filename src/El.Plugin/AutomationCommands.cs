@@ -74,7 +74,7 @@ namespace El.Plugin
                     }
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-BOM: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-BOM: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -135,7 +135,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage($"\n; Штамп обновлён: {updated} вхождений");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TITLE: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TITLE: " + ex.Message); Plugin.Log(ex); }
         }
 
         /// <summary>Заполнение атрибутов по тегам (регистронезависимо).</summary>
@@ -200,7 +200,7 @@ namespace El.Plugin
                 File.WriteAllText(dlg.FileName, sb.ToString(), new UTF8Encoding(true));
                 Ed.WriteMessage($"\n; Реестр сохранён: {dlg.FileName}");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-SHEET-LIST: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-SHEET-LIST: " + ex.Message); Plugin.Log(ex); }
         }
 
         public sealed class TitleInfo
@@ -301,7 +301,7 @@ namespace El.Plugin
                     }
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-XREF-LIST: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-XREF-LIST: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -354,7 +354,7 @@ namespace El.Plugin
                 Ed.WriteMessage($"\n; Отчёт сохранён: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK-REPORT: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK-REPORT: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -422,7 +422,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage($"\n; Пронумеровано цепей: {tagged} (слой EL_TAGS, номера без префикса).");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-AUTOTAG: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-AUTOTAG: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -504,7 +504,7 @@ namespace El.Plugin
                     }
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-JOIN: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-JOIN: " + ex.Message); Plugin.Log(ex); }
         }
     }
 }

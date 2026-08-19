@@ -105,7 +105,7 @@ namespace El.Plugin
                 Ed.WriteMessage($"\n; Отчёт сохранён: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-REPORT: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-REPORT: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -180,7 +180,7 @@ namespace El.Plugin
                 Ed.WriteMessage($"\n; Сводный отчёт: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-PROJECT-REPORT: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-PROJECT-REPORT: " + ex.Message); Plugin.Log(ex); }
         }
 
         private static string BuildProjectHtml(string folder, List<ReportData> sheets,
@@ -295,7 +295,7 @@ namespace El.Plugin
                 Ed.WriteMessage($"\n; Отчёт: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-REVISION-DIFF: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-REVISION-DIFF: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- помощники ----------

@@ -37,7 +37,8 @@ namespace El.Plugin
                 result.Add(new LineSeg((int)id.Handle.Value, new Point2D(line.StartPoint.X, line.StartPoint.Y),
                                                                    new Point2D(line.EndPoint.X, line.EndPoint.Y))
                 {
-                    Tag = id
+                    Tag = id,
+                    Layer = line.Layer
                 });
             }
             return result;

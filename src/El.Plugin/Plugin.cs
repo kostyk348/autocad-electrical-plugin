@@ -14,8 +14,12 @@ namespace El.Plugin
     /// <summary>Точка входа плагина: регистрация UI + предложение установки.</summary>
     public class Plugin : IExtensionApplication
     {
+        public static readonly string LogPath = Path.Combine(
+            Path.GetTempPath(), "el-plugin-errors.log");
+
         public void Initialize()
         {
+            CommandState.LoadLayerFilter();
             try
             {
                 Ribbon.Add();
@@ -25,6 +29,7 @@ namespace El.Plugin
             catch (System.Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("EL Plugin init: " + ex);
+                Log(ex);
             }
 
             // если загружено вручную (NETLOAD) — предложить автозагрузку
@@ -45,7 +50,7 @@ namespace El.Plugin
                         Installer.Install(ed);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { Log(ex); }
         }
 
         public void Terminate()
@@ -58,6 +63,46 @@ namespace El.Plugin
                 Palette.Instance = null;
             }
             catch { }
+        }
+
+        /// <summary>Писать ошибки в %TEMP%\el-plugin-errors.log (для диагностики на машине пользователя).</summary>
+        public static void Log(System.Exception ex)
+        {
+            try
+            {
+                File.AppendAllText(LogPath,
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n",
+                    Encoding.UTF8);
+            }
+            catch { }
+        }
+    }
+
+    /// <summary>Диагностика: версия плагина, путь загрузки, версия AutoCAD.</summary>
+    public static class DiagCommands
+    {
+        [CommandMethod("EL-VERSION")]
+        public static void ElVersion()
+        {
+            var ed = DwgAccess.Ed;
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var v = asm.GetName().Version;
+                var coreAsm = typeof(El.Core.GraphBuilder).Assembly.GetName().Version;
+                var corePath = typeof(El.Core.GraphBuilder).Assembly.Location;
+                ed.WriteMessage("\n=== Электроавтоматика: диагностика ===");
+                ed.WriteMessage($"\nПлагин: {asm.GetName().Name} v{v} (net: {Environment.Version})");
+                ed.WriteMessage($"\nПуть: {asm.Location}");
+                ed.WriteMessage($"\nEl.Core: v{coreAsm} → {corePath}");
+                ed.WriteMessage($"\nУстановлен в ApplicationPlugins: {(Installer.IsInstalledLocation() ? "да" : "нет")}");
+                ed.WriteMessage($"\nЛог ошибок: {Plugin.LogPath}");
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage("\n! EL-VERSION: " + ex.Message);
+                Plugin.Log(ex);
+            }
         }
     }
 

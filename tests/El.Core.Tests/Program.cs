@@ -184,6 +184,29 @@ namespace El.Core.Tests
     }
 
     // ============================================================
+    // LayerClusters (кластеризация по слоям)
+    // ============================================================
+
+    public class LayerClusterTests
+    {
+        public void Test_ClusterByLayer()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)) { Layer = "WIRE" },
+                new LineSeg(2, new Point2D(10, 0), new Point2D(20, 0)) { Layer = "WIRE" },
+                new LineSeg(3, new Point2D(0, 5), new Point2D(10, 5)) { Layer = "POWER" },
+                new LineSeg(4, new Point2D(0, 9), new Point2D(10, 9)), // без слоя
+            };
+            var cls = LayerClusters.Cluster(lines);
+            Program.AssertEqual(3, cls.Count, "3 кластера: WIRE, POWER, (без слоя)");
+            Program.AssertEqual(2, cls["WIRE"].Count, "WIRE: 2 линии");
+            Program.AssertEqual(1, cls["POWER"].Count, "POWER: 1 линия");
+            Program.AssertTrue(cls.ContainsKey("(без слоя)"), "без слоя — отдельный кластер");
+        }
+    }
+
+    // ============================================================
     // PolylineBuilder (объединение линий в полилинии)
     // ============================================================
 

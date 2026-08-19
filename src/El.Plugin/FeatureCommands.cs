@@ -55,7 +55,7 @@ namespace El.Plugin
                 Ed.GetString("");
                 DwgAccess.Highlight(segs, false);
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-PATH: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-PATH: " + ex.Message); Plugin.Log(ex); }
         }
 
         /// <summary>Клик: LINE — сразу; TEXT/MTEXT — ближайшая по расстоянию линия.</summary>
@@ -160,7 +160,7 @@ namespace El.Plugin
                 Ed.GetString("");
                 DwgAccess.ZoomTo(crossings[0].Point, 500);
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CROSSING: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CROSSING: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -211,7 +211,7 @@ namespace El.Plugin
                 Ed.WriteMessage($"\n; HTML сохранён: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33-HTML: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33-HTML: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -267,7 +267,7 @@ namespace El.Plugin
                     Ed.WriteMessage("\n; dot (Graphviz) не найден — только .dot. Установите graphviz или откройте в webgraphviz.com");
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-GRAPH-EXPORT: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-GRAPH-EXPORT: " + ex.Message); Plugin.Log(ex); }
         }
 
         private static string FindDot()

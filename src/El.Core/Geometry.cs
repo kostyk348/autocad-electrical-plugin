@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace El.Core
 {
@@ -42,6 +43,7 @@ namespace El.Core
         public Point2D A { get; }
         public Point2D B { get; }
         public object Tag { get; set; } // ссылка на сущность AutoCAD (ObjectId) — не используется в Core
+        public string Layer { get; set; } = "";
 
         public LineSeg(int id, Point2D a, Point2D b)
         {
@@ -52,6 +54,24 @@ namespace El.Core
 
         public double Length => A.Dist(B);
         public Point2D Mid => new Point2D((A.X + B.X) / 2.0, (A.Y + B.Y) / 2.0);
+    }
+
+    /// <summary>Кластеризация линий по слоям (для анализа в разрезе слоёв).</summary>
+    public static class LayerClusters
+    {
+        /// <summary>Группировка линий по имени слоя (порядок — по алфавиту слоёв).</summary>
+        public static Dictionary<string, List<LineSeg>> Cluster(IEnumerable<LineSeg> lines)
+        {
+            var map = new Dictionary<string, List<LineSeg>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var l in lines)
+            {
+                string layer = string.IsNullOrEmpty(l.Layer) ? "(без слоя)" : l.Layer;
+                if (!map.TryGetValue(layer, out var list))
+                    map[layer] = list = new List<LineSeg>();
+                list.Add(l);
+            }
+            return map;
+        }
     }
 
     /// <summary>Текстовая подпись с позицией.</summary>

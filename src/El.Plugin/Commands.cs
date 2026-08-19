@@ -21,12 +21,51 @@ namespace El.Plugin
         public static List<string> CheckReport = new List<string>();
         public static List<List<int>> DefectChains = new List<List<int>>();
 
-        /// <summary>Собрать модель чертежа (граф + цепи).</summary>
+        /// <summary>Фильтр слоёв для анализа (пусто = все). Задаётся EL-LAYER-FILTER, хранится в реестре.</summary>
+        public static List<string> LayerFilter = new List<string>();
+
+        private const string FilterRegKey = @"Software\ElTools\LayerFilter";
+
+        public static void LoadLayerFilter()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(FilterRegKey))
+                {
+                    string v = key?.GetValue("Layers") as string;
+                    LayerFilter = string.IsNullOrEmpty(v) || v == "*"
+                        ? new List<string>()
+                        : new List<string>(v.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                               .Select(s => s.Trim()));
+                }
+            }
+            catch { LayerFilter = new List<string>(); }
+        }
+
+        public static void SaveLayerFilter()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(FilterRegKey))
+                {
+                    key.SetValue("Layers", LayerFilter.Count == 0 ? "*" : string.Join(",", LayerFilter));
+                }
+            }
+            catch { }
+        }
+
+        public static bool IsLayerAllowed(string layer)
+        {
+            if (LayerFilter.Count == 0) return true;
+            return LayerFilter.Contains(layer ?? "", StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Собрать модель чертежа (граф + цепи) с учётом фильтра слоёв.</summary>
         public static void Refresh()
         {
             using (var tr = DwgAccess.Doc.Database.TransactionManager.StartTransaction())
             {
-                Lines = DwgAccess.CollectLines(tr);
+                Lines = DwgAccess.CollectLines(tr).Where(l => IsLayerAllowed(l.Layer)).ToList();
                 Texts = DwgAccess.CollectTexts(tr);
                 tr.Commit();
             }
