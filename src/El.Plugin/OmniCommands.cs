@@ -60,7 +60,7 @@ namespace El.Plugin
                 File.Copy(src, backup);
                 Ed.WriteMessage($"\n[OMNI] Снимок сохранён: {backup}");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] SNAP: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] SNAP: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- OMNI-LOG ----------
@@ -80,10 +80,10 @@ namespace El.Plugin
                 else if (dlg.Action == "delete")
                 {
                     try { System.IO.File.Delete(dlg.SelectedFile); Ed.WriteMessage("\n[OMNI] Слепок удалён."); }
-                    catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] Ошибка удаления: " + ex.Message); }
+                    catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] Ошибка удаления: " + ex.Message); Plugin.Log(ex); }
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] LOG: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] LOG: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- OMNI-DIFF ----------
@@ -129,7 +129,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage($"\n[OMNI] Ревизия наложена: {blockName}. OMNI-TOGGLE/CLEAR для управления.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] DIFF: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] DIFF: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- OMNI-CLEAR ----------
@@ -161,7 +161,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage("\n[OMNI] Наложение снято.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] CLEAR: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] CLEAR: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- OMNI-TOGGLE ----------
@@ -198,7 +198,7 @@ namespace El.Plugin
                 DwgAccess.Ed.Regen();
                 Ed.WriteMessage("\n[OMNI] Слои наложения переключены.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] TOGGLE: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] TOGGLE: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- OMNI-NOTE ----------
@@ -225,7 +225,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage("\n[OMNI] Заметка добавлена.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] NOTE: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] NOTE: " + ex.Message); Plugin.Log(ex); }
         }
     }
 }

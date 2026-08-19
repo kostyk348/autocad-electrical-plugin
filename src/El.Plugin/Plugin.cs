@@ -65,14 +65,32 @@ namespace El.Plugin
             catch { }
         }
 
-        /// <summary>Писать ошибки в %TEMP%\el-plugin-errors.log (для диагностики на машине пользователя).</summary>
+        /// <summary>Писать ошибки в %TEMP%\el-plugin-errors.log (для диагностики на машине пользователя).
+        /// Файл дописывается (append); при размере > 512 КБ — ротация в el-plugin-errors.old.log.</summary>
         public static void Log(System.Exception ex)
         {
             try
             {
+                RotateIfNeeded();
+                string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
                 File.AppendAllText(LogPath,
-                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n",
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] v{version} {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}\n\n",
                     Encoding.UTF8);
+            }
+            catch { }
+        }
+
+        private static void RotateIfNeeded()
+        {
+            try
+            {
+                var fi = new FileInfo(LogPath);
+                if (fi.Exists && fi.Length > 512 * 1024)
+                {
+                    string old = Path.Combine(Path.GetTempPath(), "el-plugin-errors.old.log");
+                    if (File.Exists(old)) File.Delete(old);
+                    File.Move(LogPath, old);
+                }
             }
             catch { }
         }

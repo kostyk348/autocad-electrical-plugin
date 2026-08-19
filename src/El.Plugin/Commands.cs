@@ -96,7 +96,7 @@ namespace El.Plugin
                     Ed.WriteMessage($"\n  #{i + 1}: {CommandState.Chains[i].Count} линий [{string.Join(" ", texts)}]");
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-GRAPH: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-GRAPH: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -132,7 +132,7 @@ namespace El.Plugin
                     DwgAccess.Highlight(segs, false);
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TRACE: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TRACE: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -148,7 +148,7 @@ namespace El.Plugin
                     Ed.WriteMessage(line);
                 Palette.Instance?.ShowReport(CommandState.CheckReport, CommandState.DefectChains);
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK: " + ex.Message); Plugin.Log(ex); }
         }
 
         /// <summary>Результат дефектоскопа (строки для вывода + структурированные данные).</summary>
@@ -335,7 +335,7 @@ namespace El.Plugin
                 Ed.GetString("\nЧасть 2 подсвечена. ENTER — снять:");
                 DwgAccess.Highlight(s2, false);
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-WHATIF: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-WHATIF: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -376,7 +376,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage($"\n; Таблица соединений: {CommandState.Chains.Count} цепей");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TABLE: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-TABLE: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -416,7 +416,7 @@ namespace El.Plugin
                         hist[0], hist[1], hist[2], hist[3], hist[4], hist[5]);
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-STATS: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-STATS: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -449,7 +449,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage($"\n; Раскрашено {CommandState.Chains.Count} цепей. REGEN для обновления.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-COLOR-CHAINS: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-COLOR-CHAINS: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -479,7 +479,7 @@ namespace El.Plugin
                 }
                 Ed.WriteMessage(found == 0 ? "\n; Петли не найдены" : $"\n; Найдено петель: {found}");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-LOOPS: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-LOOPS: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -508,7 +508,7 @@ namespace El.Plugin
                     Ed.WriteMessage($"\n  LINE через {kv.Value} цепей: {string.Join(" ", texts)}");
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-BOTTLENECK: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-BOTTLENECK: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ============================================================
@@ -599,7 +599,7 @@ namespace El.Plugin
                 }
                 ed.WriteMessage("\n; AW33: спецификация построена.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33: " + ex.Message); Plugin.Log(ex); }
         }
 
         /// <summary>Экспорт спецификации в CSV (для Excel/HTML).</summary>
@@ -645,7 +645,7 @@ namespace El.Plugin
                 System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), new System.Text.UTF8Encoding(true));
                 ed.WriteMessage($"\n; CSV сохранён: {dlg.FileName}");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33-CSV: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! AW33-CSV: " + ex.Message); Plugin.Log(ex); }
         }
     }
 }

@@ -113,7 +113,7 @@ namespace El.Plugin
                 }
                 ed.WriteMessage($"\n; Провод #{wireNum} начерчен. Данные в XData WIRE_DATA.");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! DrawWire: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! DrawWire: " + ex.Message); Plugin.Log(ex); }
         }
 
         private static void PlaceWireTag(Transaction tr, BlockTableRecord ms, Point3d pt, int num, double h)
@@ -174,7 +174,7 @@ namespace El.Plugin
                 }
                 ed.WriteMessage($"\n; Таблица проводов: {data.Count} шт");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! WireTable: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! WireTable: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- WireNodes ----------
@@ -212,7 +212,7 @@ namespace El.Plugin
                 }
                 ed.WriteMessage($"\n; Узлов начерчено: {nodes}");
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! WireNodes: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! WireNodes: " + ex.Message); Plugin.Log(ex); }
         }
 
         // ---------- WireSegAddr ----------
@@ -268,7 +268,7 @@ namespace El.Plugin
                     ed.WriteMessage($"\n; Расставлено адресов: {i - 1}");
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! WireSegAddr: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! WireSegAddr: " + ex.Message); Plugin.Log(ex); }
         }
 
         private sealed class PtDistComparer : IEqualityComparer<Point3d>
@@ -309,7 +309,7 @@ namespace El.Plugin
                     tr.Commit();
                 }
             }
-            catch (System.Exception ex) { Ed.WriteMessage("\n! WT: " + ex.Message); }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! WT: " + ex.Message); Plugin.Log(ex); }
         }
 
         private static void WtDraw(Transaction tr, BlockTableRecord ms, Point3d p, Point3d dir, string txt, double len, double h)
