@@ -184,6 +184,125 @@ namespace El.Core.Tests
     }
 
     // ============================================================
+    // PolylineBuilder (объединение линий в полилинии)
+    // ============================================================
+
+    public class PolylineBuilderTests
+    {
+        public void Test_LinearChain_OneSegment()
+        {
+            // 1-2-3 последовательно: один сегмент от (0,0) к (30,0)
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(10, 0), new Point2D(20, 0)),
+                new LineSeg(3, new Point2D(20, 0), new Point2D(30, 0)),
+            };
+            var segs = PolylineBuilder.BuildSegments(lines, 0.5);
+            Program.AssertEqual(1, segs.Count, "одна цепочка");
+            Program.AssertEqual(4, segs[0].Points.Count, "4 точки");
+            Program.AssertNear(0, segs[0].Points[0].X, 1e-9);
+            Program.AssertNear(30, segs[0].Points[3].X, 1e-9);
+        }
+
+        public void Test_TwoIsolatedLines_TwoSegments()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(100, 0), new Point2D(110, 0)),
+            };
+            var segs = PolylineBuilder.BuildSegments(lines, 0.5);
+            Program.AssertEqual(2, segs.Count, "две изолированные цепочки");
+        }
+
+        public void Test_StarJunction_SplitsIntoBranches()
+        {
+            // звезда: центр (10,10), три луча
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 10), new Point2D(10, 10)),
+                new LineSeg(2, new Point2D(10, 10), new Point2D(20, 10)),
+                new LineSeg(3, new Point2D(10, 10), new Point2D(10, 20)),
+            };
+            var segs = PolylineBuilder.BuildSegments(lines, 0.5);
+            // от центра идут 3 сегмента (каждый — центр+конец луча)
+            Program.AssertEqual(3, segs.Count, "3 ветки от развилки");
+        }
+
+        public void Test_Ring_ClosedLoop()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(10, 0), new Point2D(10, 10)),
+                new LineSeg(3, new Point2D(10, 10), new Point2D(0, 10)),
+                new LineSeg(4, new Point2D(0, 10), new Point2D(0, 0)),
+            };
+            var segs = PolylineBuilder.BuildSegments(lines, 0.5);
+            Program.AssertEqual(1, segs.Count, "кольцо — одна замкнутая цепочка");
+            Program.AssertEqual(5, segs[0].Points.Count, "4 вершины + замыкание");
+        }
+    }
+
+    // ============================================================
+    // Diff спецификаций (SpecDiff)
+    // ============================================================
+
+    public class SpecDiffTests
+    {
+        private static Aw33PageResult Spec(params Aw33Parser.RawText[] texts)
+            => Aw33Parser.ParsePage(texts);
+
+        public void Test_CompareWires_AddedRemovedChanged()
+        {
+            var oldSpec = Spec(
+                Aw33Tests.T(100, 0, "1,5 мм²"), Aw33Tests.T(100, 50, "КРАСН"), Aw33Tests.T(100, 100, "5 м"),
+                Aw33Tests.T(80, 0, "2,5 мм²"), Aw33Tests.T(80, 50, "СИН"), Aw33Tests.T(80, 100, "3 м"));
+            var newSpec = Spec(
+                Aw33Tests.T(100, 0, "1,5 мм²"), Aw33Tests.T(100, 50, "КРАСН"), Aw33Tests.T(100, 100, "7 м"), // длина изменилась
+                Aw33Tests.T(80, 0, "4 мм²"), Aw33Tests.T(80, 50, "БЕЛ"), Aw33Tests.T(80, 100, "2 м"));        // новый провод
+
+            var diff = SpecDiff.CompareWires(oldSpec, newSpec);
+            // КРАСН/1,5: изменился; СИН/2,5: удалён; БЕЛ/4: добавлен
+            Program.AssertEqual(1, diff.Count(w => w.Kind == "changed"), "1 изменён");
+            Program.AssertEqual(1, diff.Count(w => w.Kind == "removed"), "1 удалён");
+            Program.AssertEqual(1, diff.Count(w => w.Kind == "added"), "1 добавлен");
+            var ch = diff.First(w => w.Kind == "changed");
+            Program.AssertNear(500, ch.LenCmOld, 1e-6);
+            Program.AssertNear(700, ch.LenCmNew, 1e-6);
+        }
+
+        public void Test_CompareWires_UnchangedFiltered()
+        {
+            var spec = Spec(
+                Aw33Tests.T(100, 0, "1,5 мм²"), Aw33Tests.T(100, 50, "КРАСН"), Aw33Tests.T(100, 100, "5 м"));
+            var diff = SpecDiff.CompareWires(spec, spec);
+            Program.AssertEqual(1, diff.Count, "одна строка");
+            Program.AssertEqual("unchanged", diff[0].Kind, "без изменений");
+        }
+
+        public void Test_CompareBom()
+        {
+            var oldBom = new Dictionary<string, int> { { "RELAY", 3 }, { "TERM", 10 } };
+            var newBom = new Dictionary<string, int> { { "RELAY", 4 }, { "CB", 2 } };
+            var diff = SpecDiff.CompareBom(oldBom, newBom);
+            Program.AssertEqual(1, diff.Count(b => b.Kind == "changed"), "RELAY изменился");
+            Program.AssertEqual(1, diff.Count(b => b.Kind == "removed"), "TERM удалён");
+            Program.AssertEqual(1, diff.Count(b => b.Kind == "added"), "CB добавлен");
+        }
+
+        public void Test_CompareTopology()
+        {
+            var oldCh = new List<List<string>> { new List<string> { "A", "B" }, new List<string> { "C" } };
+            var newCh = new List<List<string>> { new List<string> { "A", "B" }, new List<string> { "D" } };
+            var topo = SpecDiff.CompareTopology(oldCh, newCh);
+            Program.AssertEqual(1, topo.Added.Count, "добавлена цепь D");
+            Program.AssertEqual(1, topo.Removed.Count, "удалена цепь C");
+        }
+    }
+
+    // ============================================================
     // Граф
     // ============================================================
 

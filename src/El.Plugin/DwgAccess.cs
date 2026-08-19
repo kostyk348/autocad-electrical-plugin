@@ -22,10 +22,13 @@ namespace El.Plugin
         public static Editor Ed => Doc.Editor;
 
         /// <summary>Все LINE из ModelSpace (текущий документ).</summary>
-        public static List<LineSeg> CollectLines(Transaction tr)
+        public static List<LineSeg> CollectLines(Transaction tr) => CollectLines(tr, Doc.Database);
+
+        /// <summary>Все LINE из ModelSpace указанной базы (для фонового чтения DWG).</summary>
+        public static List<LineSeg> CollectLines(Transaction tr, Database db)
         {
             var result = new List<LineSeg>();
-            var bt = (BlockTable)tr.GetObject(Doc.Database.BlockTableId, OpenMode.ForRead);
+            var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
             var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
             foreach (ObjectId id in ms)
             {
@@ -40,11 +43,14 @@ namespace El.Plugin
             return result;
         }
 
-        /// <summary>Все TEXT/MTEXT из ModelSpace.</summary>
-        public static List<TextLabel> CollectTexts(Transaction tr)
+        /// <summary>Все TEXT/MTEXT из ModelSpace (текущий документ).</summary>
+        public static List<TextLabel> CollectTexts(Transaction tr) => CollectTexts(tr, Doc.Database);
+
+        /// <summary>Все TEXT/MTEXT из ModelSpace указанной базы.</summary>
+        public static List<TextLabel> CollectTexts(Transaction tr, Database db)
         {
             var result = new List<TextLabel>();
-            var bt = (BlockTable)tr.GetObject(Doc.Database.BlockTableId, OpenMode.ForRead);
+            var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
             var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
             foreach (ObjectId id in ms)
             {
@@ -58,6 +64,27 @@ namespace El.Plugin
                 result.Add(new TextLabel(new Point2D(pos.X, pos.Y), text) { Tag = id });
             }
             return result;
+        }
+
+        /// <summary>Подсчёт вхождений блоков в ModelSpace (текущий документ).</summary>
+        public static Dictionary<string, int> CountBlocks(Transaction tr) => CountBlocks(tr, Doc.Database);
+
+        /// <summary>Подсчёт вхождений блоков в ModelSpace указанной базы (без xref/layout).</summary>
+        public static Dictionary<string, int> CountBlocks(Transaction tr, Database db)
+        {
+            var counts = new Dictionary<string, int>();
+            var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+            var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+            foreach (ObjectId id in ms)
+            {
+                if (id.ObjectClass.DxfName != "INSERT") continue;
+                var br = (BlockReference)tr.GetObject(id, OpenMode.ForRead);
+                var btr = (BlockTableRecord)tr.GetObject(br.BlockTableRecord, OpenMode.ForRead);
+                if (btr.IsFromExternalReference || btr.IsLayout) continue;
+                counts.TryGetValue(btr.Name, out int c);
+                counts[btr.Name] = c + 1;
+            }
+            return counts;
         }
 
         /// <summary>Подсветить сущности (по ObjectId из Tag).</summary>

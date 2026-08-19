@@ -203,12 +203,15 @@ namespace El.Plugin
             catch (System.Exception ex) { Ed.WriteMessage("\n! EL-SHEET-LIST: " + ex.Message); }
         }
 
-        private sealed class TitleInfo
+        public sealed class TitleInfo
         {
             public string Sheet = "";
             public string Total = "";
             public string Title = "";
         }
+
+        /// <summary>Публичная обёртка чтения штампа (для отчётов).</summary>
+        public static TitleInfo ReadTitleBlockPublic(string dwgPath) => ReadTitleBlock(dwgPath);
 
         /// <summary>Прочитать номер листа/наименование из штампа DWG без открытия в UI.</summary>
         private static TitleInfo ReadTitleBlock(string dwgPath)
@@ -355,7 +358,7 @@ namespace El.Plugin
         }
 
         // ============================================================
-        // EL-AUTOTAG — номера цепей C1..Cn в кружках
+        // EL-AUTOTAG — номера выбранных цепей (без префикса)
         // ============================================================
         [CommandMethod("EL-AUTOTAG")]
         public static void ElAutoTag()
@@ -364,25 +367,42 @@ namespace El.Plugin
             {
                 CommandState.Refresh();
                 if (CommandState.Graph == null || CommandState.Chains.Count == 0) { Ed.WriteMessage("\n! Нет цепей"); return; }
-                var pref = Ed.GetString(new PromptStringOptions("\nПрефикс номера (Enter — C): ") { AllowSpaces = true }).StringResult;
-                if (string.IsNullOrEmpty(pref)) pref = "C";
+
+                Ed.WriteMessage("\n=== EL-AUTOTAG: выбери линии (Enter — отмена) ===");
+                Ed.WriteMessage("\nКаждая затронутая цепь получит ОДИН номер (1, 2, 3…).");
+                var sr = Ed.GetSelection(new PromptSelectionOptions());
+                if (sr.Status != PromptStatus.OK) return;
+
+                // какие цепи затронуты выбором
+                var selected = new HashSet<int>();
+                foreach (var id in sr.Value.GetObjectIds())
+                {
+                    var line = CommandState.Lines.FirstOrDefault(l => (ObjectId)l.Tag == id);
+                    if (line == null) continue;
+                    var chain = CommandState.Graph.Trace(line.Id);
+                    foreach (var cid in chain) selected.Add(cid);
+                }
+                if (selected.Count == 0) { Ed.WriteMessage("\n! Линии не найдены в графе."); return; }
+
                 double h = Ed.GetDouble(new PromptDoubleOptions("\nВысота текста (Enter — 2.5): ") { DefaultValue = 2.5 }).Value;
 
+                // нумерация только затронутых цепей (по порядку их номера в схеме)
+                var taggedChains = CommandState.Chains.Where(ch => ch.Any(selected.Contains)).ToList();
                 int tagged = 0;
                 using (var tr = DwgAccess.Doc.Database.TransactionManager.StartTransaction())
                 {
                     DwgAccess.EnsureLayer(tr, "EL_TAGS", 30);
                     var bt = (BlockTable)tr.GetObject(DwgAccess.Doc.Database.BlockTableId, OpenMode.ForRead);
                     var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                    int i = 0;
-                    foreach (var ch in CommandState.Chains)
+                    int num = 1;
+                    foreach (var ch in taggedChains)
                     {
-                        i++;
-                        // самая длинная линия цепи — туда ставим номер
+                        // самая длинная линия цепи (в выбранной части) — туда номер
                         LineSeg best = null;
                         double bestLen = -1;
                         foreach (var id in ch)
                         {
+                            if (!selected.Contains(id)) continue;
                             var l = CommandState.Lines.First(x => x.Id == id);
                             if (l.Length > bestLen) { bestLen = l.Length; best = l; }
                         }
@@ -392,16 +412,99 @@ namespace El.Plugin
                         var circ = new Circle { Center = mid, Radius = r, Layer = "EL_TAGS", ColorIndex = 30 };
                         ms.AppendEntity(circ);
                         tr.AddNewlyCreatedDBObject(circ, true);
-                        var mt = new MText { Location = mid, Contents = pref + i, TextHeight = r * 0.65, Attachment = AttachmentPoint.MiddleCenter, Layer = "EL_TAGS" };
+                        var mt = new MText { Location = mid, Contents = num.ToString(), TextHeight = r * 0.65, Attachment = AttachmentPoint.MiddleCenter, Layer = "EL_TAGS" };
                         ms.AppendEntity(mt);
                         tr.AddNewlyCreatedDBObject(mt, true);
                         tagged++;
+                        num++;
                     }
                     tr.Commit();
                 }
-                Ed.WriteMessage($"\n; Пронумеровано цепей: {tagged} (слой EL_TAGS). REGEN при необходимости.");
+                Ed.WriteMessage($"\n; Пронумеровано цепей: {tagged} (слой EL_TAGS, номера без префикса).");
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n! EL-AUTOTAG: " + ex.Message); }
+        }
+
+        // ============================================================
+        // EL-JOIN — объединение разрозненных LINE в полилинии
+        // ============================================================
+        [CommandMethod("EL-JOIN")]
+        public static void ElJoin()
+        {
+            try
+            {
+                var doc = DwgAccess.Doc;
+                Ed.WriteMessage("\n=== EL-JOIN: объединение LINE в полилинии ===");
+                Ed.WriteMessage("\nВыберите линии (Enter — все в ModelSpace): ");
+                var sr = Ed.GetSelection(new PromptSelectionOptions());
+                var selectedIds = sr.Status == PromptStatus.OK
+                    ? new HashSet<ObjectId>(sr.Value.GetObjectIds())
+                    : null;
+
+                List<LineSeg> lines;
+                using (var tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    lines = DwgAccess.CollectLines(tr);
+                    tr.Commit();
+                }
+                if (selectedIds != null)
+                    lines = lines.Where(l => selectedIds.Contains((ObjectId)l.Tag)).ToList();
+                if (lines.Count == 0) { Ed.WriteMessage("\n! Линии не выбраны."); return; }
+
+                var segs = PolylineBuilder.BuildSegments(lines, DwgAccess.DefaultTolerance);
+                int created = 0;
+                int skipped = 0;
+                using (var tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                    foreach (var seg in segs)
+                    {
+                        if (seg.Points.Count < 2) continue;
+                        // пропускаем одиночные линии — из них полилиния не нужна
+                        if (seg.LineIds.Count == 1)
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        var pl = new Polyline();
+                        for (int i = 0; i < seg.Points.Count; i++)
+                            pl.AddVertexAt(i, new Point2d(seg.Points[i].X, seg.Points[i].Y), 0, 0, 0);
+                        // слой — как у первой линии
+                        var firstLine = (Line)tr.GetObject((ObjectId)lines.First(l => l.Id == seg.LineIds[0]).Tag, OpenMode.ForRead);
+                        pl.Layer = firstLine.Layer;
+                        ms.AppendEntity(pl);
+                        tr.AddNewlyCreatedDBObject(pl, true);
+                        created++;
+                    }
+                    tr.Commit();
+                }
+                Ed.WriteMessage($"\n; Полилиний создано: {created} (одиночных линий пропущено: {skipped})");
+
+                if (created > 0)
+                {
+                    var ask = new PromptKeywordOptions("\nУдалить исходные LINE? [Да/Нет] <Да>: ");
+                    ask.Keywords.Add("Да"); ask.Keywords.Add("Нет"); ask.Keywords.Default = "Да";
+                    var kr = Ed.GetKeywords(ask);
+                    if (kr.Status == PromptStatus.OK && kr.StringResult == "Да")
+                    {
+                        using (var tr = doc.Database.TransactionManager.StartTransaction())
+                        {
+                            foreach (var l in lines)
+                            {
+                                var id = (ObjectId)l.Tag;
+                                if (!id.IsValid || id.IsErased) continue;
+                                var ent = (Entity)tr.GetObject(id, OpenMode.ForWrite, true);
+                                if (ent.IsErased) continue;
+                                ent.Erase();
+                            }
+                            tr.Commit();
+                        }
+                        Ed.WriteMessage("\n; Исходные LINE удалены.");
+                    }
+                }
+            }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-JOIN: " + ex.Message); }
         }
     }
 }

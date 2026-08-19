@@ -192,7 +192,7 @@ namespace El.Plugin
             return res;
         }
 
-        private sealed class GapInfo
+        public sealed class GapInfo
         {
             public LineSeg L1;
             public LineSeg L2;
@@ -204,6 +204,9 @@ namespace El.Plugin
             public string Text;
             public List<int> Chains = new List<int>();
         }
+
+        /// <summary>Публичная обёртка поиска разрывов (для отчётов).</summary>
+        public static List<GapInfo> FindGapsPublic(List<LineSeg> lines, double tol) => FindGaps(lines, tol);
 
         private static List<GapInfo> FindGaps(List<LineSeg> lines, double tol)
         {

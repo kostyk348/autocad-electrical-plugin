@@ -25,6 +25,9 @@ namespace El.Plugin
             return dir;
         }
 
+        /// <summary>Публичная обёртка списка слепков (для диффов).</summary>
+        public static List<string> SnapshotFilesPublic() => SnapshotFiles();
+
         private static List<string> SnapshotFiles()
         {
             var dir = HistoryDir();
