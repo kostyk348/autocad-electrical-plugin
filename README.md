@@ -11,19 +11,28 @@ C#-плагин для AutoCAD 2024: топология электрически
 
 ## Установка
 
-### Способ 1 — автозагрузка (bundle, рекомендуется)
+### Способ 1 — прямо из AutoCAD (рекомендуется)
 
-1. Скачайте релиз `El.Plugin.2024.bundle.zip` со страницы Releases.
-2. Распакуйте — получится папка `El.Plugin.2024.bundle/`.
-3. Скопируйте её в `%APPDATA%\Autodesk\ApplicationPlugins\`.
-4. Запустите AutoCAD 2024 — плагин загрузится сам (вкладка
-   «Электроавтоматика», контекстные меню, палитра).
+1. Скачайте релиз `El.Plugin.2024.installer.zip`, распакуйте в любую папку
+   (нужны `El.Plugin.dll` + `El.Core.dll` рядом).
+2. В AutoCAD 2024: `NETLOAD` → выберите `El.Plugin.dll`.
+3. Плагин спросит «Установить для автозагрузки?» — нажмите Enter,
+   либо выполните команду `EL-INSTALL`.
+4. Плагин сам скопирует себя в
+   `%APPDATA%\Autodesk\ApplicationPlugins\El.Plugin.2024.bundle\`
+   и создаст `PackageContents.xml`.
+5. Перезапустите AutoCAD — автозагрузка.
 
-### Способ 2 — вручную (NETLOAD)
+### Способ 2 — bundle вручную
 
-1. Соберите Release (см. «Сборка») или возьмите `bin/plugin/`
-   из релиза (`El.Plugin.dll` + `El.Core.dll` — обе обязательны).
-2. В AutoCAD 2024: команда `NETLOAD` → выберите `El.Plugin.dll`.
+1. Скачайте `El.Plugin.2024.bundle.zip`, распакуйте — папка `El.Plugin.2024.bundle/`.
+2. Скопируйте её в `%APPDATA%\Autodesk\ApplicationPlugins\`.
+3. Запустите AutoCAD 2024 — плагин загрузится сам.
+
+### Способ 3 — вручную (NETLOAD)
+
+`NETLOAD` → `El.Plugin.dll` (нужен `El.Core.dll` рядом). Автозагрузки нет,
+но всё работает в текущей сессии.
 
 ### AutoCAD 2014
 
