@@ -169,15 +169,75 @@ namespace El.Plugin
                 if (!File.Exists(pkg))
                     File.WriteAllText(pkg, PackageContentsXml(), new UTF8Encoding(true));
 
+                // надёжная автозагрузка через реестр (LoadCtrl=2) — даже если
+                // ApplicationPlugins не подхватился
+                int regCount = AddRegistryAutoLoad(Path.Combine(contents, "El.Plugin.dll"));
+
                 ed.WriteMessage($"\n[Электроавтоматика] Плагин установлен: {bundle}");
+                ed.WriteMessage($"\n[Электроавтоматика] Реестровая автозагрузка: {regCount} записей.");
                 ed.WriteMessage("\n[Электроавтоматика] Перезапустите AutoCAD — плагин загрузится автоматически.");
                 return true;
             }
             catch (System.Exception ex)
             {
                 ed.WriteMessage("\n[Электроавтоматика] Ошибка установки: " + ex.Message);
+                Plugin.Log(ex);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Реестровая автозагрузка .NET-приложения (официальный механизм):
+        /// HKCU\Software\Autodesk\AutoCAD\R{ver}\{product}\Applications\ElTools
+        ///   Loader = путь к DLL, LoaderPath, Managed=1, LoadCtrl=2 (при старте).
+        /// Возвращает число созданных записей.
+        /// </summary>
+        public static int AddRegistryAutoLoad(string loaderDll)
+        {
+            int count = 0;
+            try
+            {
+                string baseKey = @"SOFTWARE\Autodesk\AutoCAD";
+                string loaderPath = Path.GetDirectoryName(loaderDll);
+                // ищем все установленные версии AutoCAD (R19.1=2014, R24.x=2024...)
+                using (var hklm = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseKey))
+                {
+                    if (hklm == null) return 0;
+                    foreach (string rVer in hklm.GetSubKeyNames())
+                    {
+                        if (!rVer.StartsWith("R") || rVer.StartsWith("R1")) continue; // R19.1+ (2014+)
+                        using (var rKey = hklm.OpenSubKey(rVer))
+                        {
+                            if (rKey == null) continue;
+                            foreach (string prod in rKey.GetSubKeyNames())
+                            {
+                                string prodName = "";
+                                try
+                                {
+                                    using (var p = rKey.OpenSubKey(prod))
+                                        prodName = p?.GetValue("ProductName") as string ?? "";
+                                }
+                                catch { }
+                                if (!prodName.Contains("AutoCAD")) continue;
+                                // создаём зеркало в HKCU
+                                string appKey = $@"{baseKey}\{rVer}\{prod}\Applications\ElTools";
+                                using (var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(appKey))
+                                {
+                                    if (k == null) continue;
+                                    k.SetValue("Loader", loaderDll);
+                                    k.SetValue("LoaderPath", loaderPath);
+                                    k.SetValue("Managed", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                                    k.SetValue("LoadCtrl", 2, Microsoft.Win32.RegistryValueKind.DWord);
+                                    k.SetValue("Description", "Electrical Tools (Электроавтоматика)");
+                                }
+                                count++;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            return count;
         }
 
         private static void CopyFile(string src, string dst)
@@ -238,6 +298,68 @@ namespace El.Plugin
                 return;
             }
             Installer.Install(ed);
+        }
+
+        /// <summary>Диагностика установки: где бандл, реестр, XML.</summary>
+        [CommandMethod("EL-INSTALL-STATUS")]
+        public static void InstallStatus()
+        {
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc == null) return;
+            var ed = doc.Editor;
+            try
+            {
+                ed.WriteMessage("\n=== Электроавтоматика: статус установки ===");
+                string asm = Assembly.GetExecutingAssembly().Location;
+                ed.WriteMessage($"\nЗагружен из: {asm}");
+                ed.WriteMessage($"\nApplicationPlugins (HKCU): {Installer.AppPluginsDir()}");
+
+                var roam = Path.Combine(Installer.AppPluginsDir(), "El.Plugin.2024.bundle");
+                var roam14 = Path.Combine(Installer.AppPluginsDir(), "El.Plugin.2014.bundle");
+                ed.WriteMessage($"\n[2024] {roam}: {(Directory.Exists(roam) ? "ЕСТЬ" : "нет")}");
+                ed.WriteMessage($"\n[2014] {roam14}: {(Directory.Exists(roam14) ? "ЕСТЬ" : "нет")}");
+                if (Directory.Exists(roam))
+                {
+                    string pkg = Path.Combine(roam, "PackageContents.xml");
+                    ed.WriteMessage($"\n  PackageContents.xml: {(File.Exists(pkg) ? "ЕСТЬ" : "НЕТ!")}");
+                    string dll = Path.Combine(roam, "Contents", "El.Plugin.dll");
+                    string core = Path.Combine(roam, "Contents", "El.Core.dll");
+                    ed.WriteMessage($"\n  El.Plugin.dll: {(File.Exists(dll) ? "ЕСТЬ" : "НЕТ!")}");
+                    ed.WriteMessage($"\n  El.Core.dll: {(File.Exists(core) ? "ЕСТЬ" : "НЕТ!")}");
+                }
+
+                // реестровые записи
+                ed.WriteMessage("\nРеестр (автозагрузка):");
+                using (var hklm = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Autodesk\AutoCAD"))
+                {
+                    if (hklm == null) { ed.WriteMessage("\n  AutoCAD в реестре не найден"); }
+                    else
+                    {
+                        foreach (string rVer in hklm.GetSubKeyNames())
+                        {
+                            if (!rVer.StartsWith("R")) continue;
+                            using (var rKey = hklm.OpenSubKey(rVer))
+                            {
+                                foreach (string prod in rKey.GetSubKeyNames())
+                                {
+                                    string app = $@"HKCU\SOFTWARE\Autodesk\AutoCAD\{rVer}\{prod}\Applications\ElTools";
+                                    using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"SOFTWARE\Autodesk\AutoCAD\{rVer}\{prod}\Applications\ElTools"))
+                                    {
+                                        string loader = k?.GetValue("Loader") as string ?? "";
+                                        ed.WriteMessage($"\n  {rVer}\\{prod}: {(k != null ? "ЕСТЬ → " + loader : "нет")}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                ed.WriteMessage($"\nЛог ошибок: {Plugin.LogPath}");
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage("\n! EL-INSTALL-STATUS: " + ex.Message);
+                Plugin.Log(ex);
+            }
         }
     }
 }
