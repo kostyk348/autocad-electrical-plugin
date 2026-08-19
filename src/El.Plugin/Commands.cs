@@ -160,12 +160,25 @@ namespace El.Plugin
             catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK: " + ex.Message); }
         }
 
-        private static List<(LineSeg L1, LineSeg L2, double D)> FindGaps(List<LineSeg> lines, double tol)
+        private sealed class GapInfo
+        {
+            public LineSeg L1;
+            public LineSeg L2;
+            public double D;
+        }
+
+        private sealed class DupInfo
+        {
+            public string Text;
+            public List<int> Chains = new List<int>();
+        }
+
+        private static List<GapInfo> FindGaps(List<LineSeg> lines, double tol)
         {
             double gs = tol * 6.0, tol2 = tol * tol;
             var grid = new SpatialGrid<int>(gs);
             foreach (var l in lines) { grid.Add(l.A, l.Id); grid.Add(l.B, l.Id); }
-            var result = new List<(LineSeg, LineSeg, double)>();
+            var result = new List<GapInfo>();
             var seen = new HashSet<long>();
             foreach (var l in lines)
             {
@@ -182,7 +195,7 @@ namespace El.Plugin
                             double d = p.Dist(op);
                             if (d > tol && d < gs)
                             {
-                                result.Add((l, o, d));
+                                result.Add(new GapInfo { L1 = l, L2 = o, D = d });
                                 break;
                             }
                         }
@@ -192,20 +205,19 @@ namespace El.Plugin
             return result;
         }
 
-        private static List<(string Text, List<int> Chains)> FindDuplicateTexts(List<List<int>> chains, WireGraph g, List<LineSeg> lines)
+        private static List<DupInfo> FindDuplicateTexts(List<List<int>> chains, WireGraph g, List<LineSeg> lines)
         {
-            var map = new Dictionary<string, List<int>>();
+            var map = new Dictionary<string, DupInfo>();
             for (int i = 0; i < chains.Count; i++)
             {
                 var texts = ChainTexts.NearEnds(g, chains[i], CommandState.Texts, DwgAccess.DefaultTextRadius);
                 foreach (var t in texts.Distinct())
                 {
-                    if (!map.TryGetValue(t, out var list)) map[t] = list = new List<int>();
-                    list.Add(i);
+                    if (!map.TryGetValue(t, out var info)) map[t] = info = new DupInfo { Text = t };
+                    info.Chains.Add(i);
                 }
             }
-            return map.Where(kv => kv.Value.Count > 1)
-                      .Select(kv => (kv.Key, kv.Value)).ToList();
+            return map.Values.Where(v => v.Chains.Count > 1).ToList();
         }
 
         // ============================================================

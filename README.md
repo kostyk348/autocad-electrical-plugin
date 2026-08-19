@@ -34,21 +34,27 @@ C#-плагин для AutoCAD 2024: топология электрически
 `NETLOAD` → `El.Plugin.dll` (нужен `El.Core.dll` рядом). Автозагрузки нет,
 но всё работает в текущей сессии.
 
-### AutoCAD 2014
+### AutoCAD 2014 — готовые сборки
 
-LISP-инструменты (el-tools/omni) полностью работают в 2014 — берите
-CP1251-версии из их релизов. **C#-плагин под 2014** собирается из
-исходников после установки AutoCAD 2014 (managed API DLL берутся из его
-папки, отдельно не распространяются):
+Плагин **собран против официального API AutoCAD 2014** (R19.1, net45;
+DLL API извлечены из вашего ISO `Autodesk.AutoCAD.2014.SP1.ru-en.x86-x64.iso`).
+В релизе: `El.Plugin.2014.installer.zip` и `El.Plugin.2014.bundle.zip` —
+установка так же через NETLOAD → Enter (EL-INSTALL) → перезапуск.
 
+Поддержка 2014 в коде:
+- единый исходник, `El.Plugin.2014` (net45) vs `El.Plugin` (net48);
+- `#if NET45` в Installer: имя bundle `El.Plugin.2014.bundle`, `SeriesMin/Max=R19.1`;
+- `El.Core` мультитаргет: `netstandard2.0` (2024) + `net45` (2014);
+- зум через `ViewTableRecord` (в 2014 нет `Editor.Command`);
+- без кортежей C# 7 (net45 не имеет ValueTuple).
+
+Пересборка 2014 без установленного AutoCAD:
 ```
-dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release ^
-    -p:Acad2014Path="C:\Program Files\Autodesk\AutoCAD 2014"
+.\scripts\extract-2014.ps1 -Iso "C:\...\Autodesk.AutoCAD.2014.SP1.ru-en.x86-x64.iso"
+dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release -p:Acad2014Path="...\refs\2014"
 ```
 
-Результат — `bin/plugin-2014/El.Plugin.2014.dll` (net45, единый код с 2024).
-
-> Требуется El.Core.dll рядом с El.Plugin.dll (копируется в bin/plugin).
+LISP-инструменты для 2014 — CP1251-версии в релизах el-tools/omni.
 
 ## UI
 

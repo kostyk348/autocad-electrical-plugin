@@ -1,0 +1,12 @@
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.csproj.AssemblyReference.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.AssemblyInfoInputs.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.AssemblyInfo.cs
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.csproj.CoreCompileInputs.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\bin\Release\net45\El.Plugin.2014.dll
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\bin\Release\net45\El.Plugin.2014.pdb
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\bin\Release\net45\El.Core.dll
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\bin\Release\net45\El.Core.pdb
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.csproj.CopyComplete
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.dll
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Plugin.2014\obj\Release\net45\El.Plugin.2014.pdb

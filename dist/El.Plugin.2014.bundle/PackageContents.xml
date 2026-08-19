@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+    AutodeskProduct="AutoCAD"
+    Name="Electrical Tools (Электроавтоматика)"
+    Description="Топология схем, аудит, спецификации AW33 с кол-вом проводов, провода с XData, OMNI-версии. Ribbon + контекстные меню + палитра."
+    AppVersion="1.1.0"
+    ProductType="Application"
+    ProductCode="{066c4090-f8cf-4f6a-957a-56ed496d7f35}"
+    UpgradeCode="{35771725-e194-4a6f-8132-0ea32a5cb5b5}">
+  <Components>
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R19.1" SeriesMax="R19.1" />
+    <ComponentEntry AppName="El.Plugin"
+        ModuleName="./Contents/El.Plugin.dll"
+        AppType=".NET"
+        LoadOnAutoCADStartup="True"
+        LoadOnCommandInvocation="False" />
+  </Components>
+</ApplicationPackage>

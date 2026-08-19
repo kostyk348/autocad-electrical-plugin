@@ -127,6 +127,16 @@ namespace El.Plugin
             tr.AddNewlyCreatedDBObject(mt, true);
         }
 
+        private sealed class WireRecord
+        {
+            public int Num;
+            public string Dev1;
+            public string Term1;
+            public string Dev2;
+            public string Term2;
+            public double LenM;
+        }
+
         // ---------- WireTable ----------
         [CommandMethod("WireTable")]
         public static void WireTable()
@@ -135,7 +145,7 @@ namespace El.Plugin
             {
                 var doc = DwgAccess.Doc;
                 var ed = Ed;
-                var data = new List<(int Num, string Dev1, string Term1, string Dev2, string Term2, double LenM)>();
+                var data = new List<WireRecord>();
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
                 {
                     var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
@@ -146,7 +156,7 @@ namespace El.Plugin
                         var pl = (Polyline)tr.GetObject(id, OpenMode.ForRead);
                         var vals = GetWireXData(pl);
                         if (vals.Count < 5) continue;
-                        data.Add((int.Parse(vals[0]), vals[1], vals[2], vals[3], vals[4], pl.Length / 1000.0));
+                        data.Add(new WireRecord { Num = int.Parse(vals[0]), Dev1 = vals[1], Term1 = vals[2], Dev2 = vals[3], Term2 = vals[4], LenM = pl.Length / 1000.0 });
                     }
                     tr.Commit();
                 }

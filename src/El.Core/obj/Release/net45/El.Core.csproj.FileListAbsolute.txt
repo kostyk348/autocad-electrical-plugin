@@ -1,0 +1,9 @@
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\bin\Release\net45\El.Core.dll
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\bin\Release\net45\El.Core.pdb
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.csproj.AssemblyReference.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.AssemblyInfoInputs.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.AssemblyInfo.cs
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.csproj.CoreCompileInputs.cache
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.dll
+C:\Users\Lab\Documents\autocad-electrical-plugin\src\El.Core\obj\Release\net45\El.Core.pdb

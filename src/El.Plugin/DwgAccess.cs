@@ -119,16 +119,24 @@ namespace El.Plugin
                 if (!first)
                 {
                     double pad = Math.Max(10.0, Math.Max(ext.MaxPoint.X - ext.MinPoint.X, ext.MaxPoint.Y - ext.MinPoint.Y) * 0.05);
-                    var p1 = new Point3d(ext.MinPoint.X - pad, ext.MinPoint.Y - pad, 0);
-                    var p2 = new Point3d(ext.MaxPoint.X + pad, ext.MaxPoint.Y + pad, 0);
-                    Ed.Command("_.ZOOM", "_W", p1, p2);
+                    var view = Ed.GetCurrentView();
+                    // CenterPoint — Point2d (вид лежит в плоскости XY)
+                    view.CenterPoint = new Point2d((ext.MinPoint.X + ext.MaxPoint.X) / 2.0,
+                                                   (ext.MinPoint.Y + ext.MaxPoint.Y) / 2.0);
+                    view.Height = (ext.MaxPoint.Y - ext.MinPoint.Y) + pad * 2;
+                    view.Width = (ext.MaxPoint.X - ext.MinPoint.X) + pad * 2;
+                    Ed.SetCurrentView(view);
                 }
             }
         }
 
         public static void ZoomTo(Point2D p, double size)
         {
-            Ed.Command("_.ZOOM", "_C", new Point3d(p.X, p.Y, 0), size);
+            var view = Ed.GetCurrentView();
+            view.CenterPoint = new Point2d(p.X, p.Y);
+            view.Height = size;
+            view.Width = size;
+            Ed.SetCurrentView(view);
         }
 
         /// <summary>Создать слой (если нет).</summary>

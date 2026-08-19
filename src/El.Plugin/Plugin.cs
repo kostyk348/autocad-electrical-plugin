@@ -68,7 +68,15 @@ namespace El.Plugin
     /// </summary>
     public static class Installer
     {
+#if NET45
+        private const string BundleName = "El.Plugin.2014.bundle";
+        private const string SeriesMin = "R19.1";
+        private const string SeriesMax = "R19.1";
+#else
         private const string BundleName = "El.Plugin.2024.bundle";
+        private const string SeriesMin = "R24.0";
+        private const string SeriesMax = "R24.3";
+#endif
         private static readonly Guid ProductCode = new Guid("066c4090-f8cf-4f6a-957a-56ed496d7f35");
         private static readonly Guid UpgradeCode = new Guid("35771725-e194-4a6f-8132-0ea32a5cb5b5");
 
@@ -150,7 +158,7 @@ namespace El.Plugin
     ProductCode=""{{{ProductCode}}}""
     UpgradeCode=""{{{UpgradeCode}}}"">
   <Components>
-    <RuntimeRequirements OS=""Win64"" Platform=""AutoCAD"" SeriesMin=""R24.0"" SeriesMax=""R24.3"" />
+    <RuntimeRequirements OS=""Win64"" Platform=""AutoCAD"" SeriesMin=""{SeriesMin}"" SeriesMax=""{SeriesMax}"" />
     <ComponentEntry AppName=""El.Plugin""
         ModuleName=""./Contents/El.Plugin.dll""
         AppType="".NET""

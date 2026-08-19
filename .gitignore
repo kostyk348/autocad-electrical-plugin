@@ -1,4 +1,4 @@
-bin/
-obj/
-*.user
-.vs/
+# Managed API DLL для сборки под AutoCAD 2014.
+# Извлекаются из ISO AutoCAD 2014 (см. scripts/extract-2014.ps1).
+# НЕ коммитить: DLL Autodesk распространяются только с установленным AutoCAD.
+refs/
