@@ -104,60 +104,92 @@ namespace El.Plugin
         {
             try
             {
-                CommandState.Refresh();
-                if (CommandState.Graph == null) { Ed.WriteMessage("\n! Мало LINE"); return; }
-                var g = CommandState.Graph;
-                var lines = CommandState.Lines;
-                var chains = CommandState.Chains;
-                CommandState.CheckReport.Clear();
-                CommandState.DefectChains.Clear();
-
-                Ed.WriteMessage($"\n=== EL-CHECK: {lines.Count} линий, {chains.Count} цепей ===");
-
-                // 1. изолированные
-                var isolated = g.Adj.Where(kv => kv.Value.Count == 0).Select(kv => kv.Key).ToList();
-                Ed.WriteMessage($"\n--- ИЗОЛИРОВАННЫЕ ЛИНИИ: {isolated.Count} шт ---");
-                foreach (var id in isolated)
-                {
-                    var l = lines.First(x => x.Id == id);
-                    Ed.WriteMessage($"\n  LINE {l.A} — {l.B}");
-                    CommandState.CheckReport.Add($"Изолированная линия: {l.A}");
-                }
-
-                // 2. near-miss разрывы (grid)
-                var gaps = FindGaps(lines, DwgAccess.DefaultTolerance);
-                Ed.WriteMessage($"\n--- БЛИЗКИЕ РАЗРЫВЫ (gap < {DwgAccess.DefaultTolerance * 6:F1} мм): {gaps.Count} ---");
-                foreach (var gp in gaps)
-                    Ed.WriteMessage($"\n  gap {gp.D:F2} мм: {gp.L1.A} — {gp.L2.A}");
-
-                // 3. дубликаты текста в разных цепях
-                var dup = FindDuplicateTexts(chains, g, lines);
-                Ed.WriteMessage($"\n--- ДУБЛИКАТЫ ТЕКСТА: {dup.Count} ---");
-                foreach (var d in dup)
-                    Ed.WriteMessage($"\n  \"{d.Text}\" в цепях: {string.Join(", ", d.Chains.Select(c => "#" + (c + 1)))}");
-
-                // 4. цепи без подписей
-                int textless = 0;
-                for (int i = 0; i < chains.Count; i++)
-                {
-                    var texts = ChainTexts.NearEnds(g, chains[i], CommandState.Texts, DwgAccess.DefaultTextRadius);
-                    if (texts.Count == 0)
-                    {
-                        textless++;
-                        Ed.WriteMessage($"\n  Цепь #{i + 1}: {chains[i].Count} линий, без текста");
-                        CommandState.DefectChains.Add(chains[i]);
-                    }
-                }
-                Ed.WriteMessage($"\nЦепи без подписей: {textless}");
-
-                // 5. цепи из 1 линии
-                int singles = chains.Count(c => c.Count == 1);
-                Ed.WriteMessage($"\nЦепи из одной линии: {singles}");
-
-                Ed.WriteMessage("\n=== EL-CHECK завершён ===");
+                var report = BuildCheckReport();
+                foreach (var line in report.Lines)
+                    Ed.WriteMessage(line);
                 Palette.Instance?.ShowReport(CommandState.CheckReport, CommandState.DefectChains);
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n! EL-CHECK: " + ex.Message); }
+        }
+
+        /// <summary>Результат дефектоскопа (строки для вывода + структурированные данные).</summary>
+        public sealed class CheckReportResult
+        {
+            public List<string> Lines = new List<string>();
+            public int Isolated;
+            public int Gaps;
+            public int Duplicates;
+            public int Textless;
+            public int SingleLines;
+        }
+
+        /// <summary>Собрать отчёт дефектоскопа (переиспользуется EL-CHECK и EL-CHECK-REPORT).</summary>
+        public static CheckReportResult BuildCheckReport()
+        {
+            var res = new CheckReportResult();
+            CommandState.Refresh();
+            if (CommandState.Graph == null) { res.Lines.Add("\n! Мало LINE"); return res; }
+            var g = CommandState.Graph;
+            var lines = CommandState.Lines;
+            var chains = CommandState.Chains;
+            CommandState.CheckReport.Clear();
+            CommandState.DefectChains.Clear();
+
+            res.Lines.Add($"\n=== EL-CHECK: {lines.Count} линий, {chains.Count} цепей ===");
+
+            // 1. изолированные
+            var isolated = g.Adj.Where(kv => kv.Value.Count == 0).Select(kv => kv.Key).ToList();
+            res.Isolated = isolated.Count;
+            res.Lines.Add($"\n--- ИЗОЛИРОВАННЫЕ ЛИНИИ: {isolated.Count} шт ---");
+            foreach (var id in isolated)
+            {
+                var l = lines.First(x => x.Id == id);
+                res.Lines.Add($"\n  LINE {l.A} — {l.B}");
+                CommandState.CheckReport.Add($"Изолированная линия: {l.A}");
+            }
+
+            // 2. near-miss разрывы (grid)
+            var gaps = FindGaps(lines, DwgAccess.DefaultTolerance);
+            res.Gaps = gaps.Count;
+            res.Lines.Add($"\n--- БЛИЗКИЕ РАЗРЫВЫ (gap < {DwgAccess.DefaultTolerance * 6:F1} мм): {gaps.Count} ---");
+            foreach (var gp in gaps)
+            {
+                res.Lines.Add($"\n  gap {gp.D:F2} мм: {gp.L1.A} — {gp.L2.A}");
+                CommandState.CheckReport.Add($"Разрыв {gp.D:F1} мм: {gp.L1.A}");
+            }
+
+            // 3. дубликаты текста в разных цепях
+            var dup = FindDuplicateTexts(chains, g, lines);
+            res.Duplicates = dup.Count;
+            res.Lines.Add($"\n--- ДУБЛИКАТЫ ТЕКСТА: {dup.Count} ---");
+            foreach (var d in dup)
+            {
+                res.Lines.Add($"\n  \"{d.Text}\" в цепях: {string.Join(", ", d.Chains.Select(c => "#" + (c + 1)))}");
+                CommandState.CheckReport.Add($"Дубликат \"{d.Text}\"");
+            }
+
+            // 4. цепи без подписей
+            int textless = 0;
+            for (int i = 0; i < chains.Count; i++)
+            {
+                var texts = ChainTexts.NearEnds(g, chains[i], CommandState.Texts, DwgAccess.DefaultTextRadius);
+                if (texts.Count == 0)
+                {
+                    textless++;
+                    res.Lines.Add($"\n  Цепь #{i + 1}: {chains[i].Count} линий, без текста");
+                    CommandState.DefectChains.Add(chains[i]);
+                }
+            }
+            res.Textless = textless;
+            res.Lines.Add($"\nЦепи без подписей: {textless}");
+
+            // 5. цепи из 1 линии
+            int singles = chains.Count(c => c.Count == 1);
+            res.SingleLines = singles;
+            res.Lines.Add($"\nЦепи из одной линии: {singles}");
+
+            res.Lines.Add("\n=== EL-CHECK завершён ===");
+            return res;
         }
 
         private sealed class GapInfo

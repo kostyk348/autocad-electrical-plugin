@@ -56,6 +56,14 @@ namespace El.Plugin.Ui
                 MakeButton("Адреса точек", "WireSegAddr", "Разбивка линии"),
                 MakeButton("Выноска", "WT", "Стрелка с номером")));
 
+            _tab.Panels.Add(MakePanel("Автоматизация",
+                MakeButton("Спецификация блоков", "EL-BOM", "Подсчёт вхождений блоков → таблица"),
+                MakeButton("Штамп (лист/дата)", "EL-TITLE", "Автозаполнение атрибутов штампа"),
+                MakeButton("Реестр листов", "EL-SHEET-LIST", "Все DWG в папке → CSV (фоновое чтение)"),
+                MakeButton("XREF-статусы", "EL-XREF-LIST", "Список внешних ссылок и их состояние"),
+                MakeButton("Отчёт EL-CHECK", "EL-CHECK-REPORT", "Дефектоскоп → md/html файл"),
+                MakeButton("Номера цепей", "EL-AUTOTAG", "C1..Cn в кружках на всех цепях")));
+
             _tab.Panels.Add(MakePanel("OMNI (версии)",
                 MakeButton("Слепок", "OMNI-SNAP", "Копия DWG в _OMNI_HISTORY"),
                 MakeButton("Список", "OMNI-LOG", "Открыть ревизию"),
