@@ -58,6 +58,132 @@ namespace El.Core.Tests
     }
 
     // ============================================================
+    // Новые алгоритмы: путь, пересечения, экспорт
+    // ============================================================
+
+    public class GraphAlgorithmsTests
+    {
+        private static WireGraph Chain3()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(10, 0), new Point2D(20, 0)),
+                new LineSeg(3, new Point2D(20, 0), new Point2D(30, 0)),
+            };
+            return GraphBuilder.Build(lines, 0.5);
+        }
+
+        public void Test_FindPath_ThreeLines()
+        {
+            var g = Chain3();
+            var path = GraphAlgorithms.FindPath(g, 1, 3);
+            Program.AssertEqual(3, path.Count, "путь 1->3 через 2");
+            Program.AssertEqual(1, path[0]);
+            Program.AssertEqual(2, path[1]);
+            Program.AssertEqual(3, path[2]);
+        }
+
+        public void Test_FindPath_NoPath_ReturnsNull()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(100, 0), new Point2D(110, 0)),
+            };
+            var g = GraphBuilder.Build(lines, 0.5);
+            Program.AssertTrue(GraphAlgorithms.FindPath(g, 1, 2) == null, "нет пути");
+        }
+
+        public void Test_SegmentIntersect_Core()
+        {
+            // горизонталь (0,5)-(10,5) и вертикаль (5,0)-(5,10) -> (5,5)
+            var p = GraphAlgorithms.SegmentIntersect(
+                new Point2D(0, 5), new Point2D(10, 5),
+                new Point2D(5, 0), new Point2D(5, 10));
+            Program.AssertTrue(p.HasValue, "должны пересечься");
+            Program.AssertNear(5, p.Value.X, 1e-9);
+            Program.AssertNear(5, p.Value.Y, 1e-9);
+        }
+
+        public void Test_SegmentIntersect_Parallel_Null()
+        {
+            var p = GraphAlgorithms.SegmentIntersect(
+                new Point2D(0, 0), new Point2D(10, 0),
+                new Point2D(0, 5), new Point2D(10, 5));
+            Program.AssertTrue(!p.HasValue, "параллельные — без пересечения");
+        }
+
+        public void Test_SegmentIntersect_OffSegment_Null()
+        {
+            // вертикаль на x=20, горизонталь 0..10 — не пересекаются в пределах
+            var p = GraphAlgorithms.SegmentIntersect(
+                new Point2D(0, 5), new Point2D(10, 5),
+                new Point2D(20, 0), new Point2D(20, 10));
+            Program.AssertTrue(!p.HasValue, "вне отрезка");
+        }
+
+        public void Test_FindCrossings_TrueCross_Detected()
+        {
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 5), new Point2D(10, 5)),
+                new LineSeg(2, new Point2D(5, 0), new Point2D(5, 10)),
+            };
+            var cr = GraphAlgorithms.FindCrossings(lines, 0.5);
+            Program.AssertEqual(1, cr.Count, "одно истинное пересечение");
+        }
+
+        public void Test_FindCrossings_EndpointJunction_Ignored()
+        {
+            // стык концов (L-образное соединение) — НЕ пересечение
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 0), new Point2D(10, 0)),
+                new LineSeg(2, new Point2D(10, 0), new Point2D(10, 10)),
+            };
+            var cr = GraphAlgorithms.FindCrossings(lines, 0.5);
+            Program.AssertEqual(0, cr.Count, "стыковка концов не считается пересечением");
+        }
+
+        public void Test_FindCrossings_TeeJunction_Ignored()
+        {
+            // T-образное касание концом середины — НЕ пересечение
+            var lines = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(0, 5), new Point2D(10, 5)),
+                new LineSeg(2, new Point2D(5, 5), new Point2D(5, 10)),
+            };
+            var cr = GraphAlgorithms.FindCrossings(lines, 0.5);
+            Program.AssertEqual(0, cr.Count, "касание концом не считается");
+        }
+
+        public void Test_DotExport_ProducesGraph()
+        {
+            var g = Chain3();
+            var dot = DotExporter.ToDot(g, new List<TextLabel>());
+            Program.AssertTrue(dot.Contains("graph scheme"), "заголовок графа");
+            Program.AssertTrue(dot.Contains("n1 -- n2"), "ребро 1-2");
+            Program.AssertTrue(dot.Contains("n2 -- n3"), "ребро 2-3");
+            Program.AssertTrue(dot.Contains("cluster_1"), "кластер цепи");
+        }
+
+        public void Test_HtmlExport_ContainsRows()
+        {
+            var page = Aw33Parser.ParsePage(new List<Aw33Parser.RawText>
+            {
+                Aw33Tests.T(100, 0, "1,5 мм²"),
+                Aw33Tests.T(100, 50, "КРАСН"),
+                Aw33Tests.T(100, 100, "5 м"),
+            });
+            var html = HtmlExporter.Aw33ToHtml(page);
+            Program.AssertTrue(html.Contains("КРАСН"), "цвет в HTML");
+            Program.AssertTrue(html.Contains("500.0"), "длина 500 см");
+            Program.AssertTrue(html.Contains("5.00"), "длина в метрах");
+        }
+    }
+
+    // ============================================================
     // Граф
     // ============================================================
 
@@ -156,7 +282,7 @@ namespace El.Core.Tests
 
     public class Aw33Tests
     {
-        private static Aw33Parser.RawText T(double y, double x, string text)
+        public static Aw33Parser.RawText T(double y, double x, string text)
             => new Aw33Parser.RawText { Y = y, X = x, Text = text };
 
         public void Test_WireWithQty_MultipliesLength()

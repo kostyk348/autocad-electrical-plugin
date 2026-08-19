@@ -32,12 +32,15 @@ namespace El.Plugin.Ui
 
             _tab.Panels.Add(MakePanel("Цепи и Граф",
                 MakeButton("Трассировать", "EL-TRACE", "Трассировка цепи по клику"),
+                MakeButton("Путь между точками", "EL-PATH", "Клик A → клик B → путь по линиям"),
                 MakeButton("Разрыв (что если)", "EL-WHATIF", "Симуляция разрыва цепи"),
                 MakeButton("Таблица соединений", "EL-TABLE", "Откуда → Куда"),
-                MakeButton("Граф (отладка)", "EL-GRAPH", "Информация о графе")));
+                MakeButton("Граф (отладка)", "EL-GRAPH", "Информация о графе"),
+                MakeButton("Экспорт графа", "EL-GRAPH-EXPORT", "Топология в Graphviz DOT/PNG")));
 
             _tab.Panels.Add(MakePanel("Аудит и Дефекты",
                 MakeButton("Дефектоскоп", "EL-CHECK", "Проверки схемы"),
+                MakeButton("Пересечения", "EL-CROSSING", "X-пересечения линий без узла"),
                 MakeButton("Петли", "EL-LOOPS", "Поиск колец"),
                 MakeButton("Узкие места", "EL-BOTTLENECK", "Топ-10"),
                 MakeButton("Статистика", "EL-STATS", "Статистика чертежа"),
@@ -45,6 +48,7 @@ namespace El.Plugin.Ui
 
             _tab.Panels.Add(MakePanel("Спецификации",
                 MakeButton("Спецификация AW33", "AW33", "Постраничный сбор проводов"),
+                MakeButton("Спецификация HTML", "AW33-HTML", "В HTML-таблицу + браузер"),
                 MakeButton("Экспорт CSV", "AW33-CSV", "Спецификация в CSV"),
                 MakeButton("Провод", "DrawWire", "Полилиния + XData"),
                 MakeButton("Таблица проводов", "WireTable", "Из XData"),
