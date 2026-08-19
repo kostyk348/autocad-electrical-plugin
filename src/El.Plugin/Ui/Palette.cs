@@ -19,7 +19,10 @@ namespace El.Plugin.Ui
 
         private readonly PaletteSet _ps;
         private readonly ListView _list;
+        private readonly LayersPaletteControl _layers;
         private List<List<int>> _defectChains = new List<List<int>>();
+
+        public LayersPaletteControl Layers => _layers;
 
         public Palette()
         {
@@ -52,7 +55,17 @@ namespace El.Plugin.Ui
             host.Controls.Add(btnZoom);
             host.Controls.Add(btnRefresh);
 
+            _layers = new LayersPaletteControl();
+
             _ps.Add("Цепи", host);
+            _ps.Add("Слои", _layers);
+        }
+
+        /// <summary>Показать палитру; при первом показе — заполнить легенду слоёв.</summary>
+        public void Show()
+        {
+            _layers.RefreshLayers();
+            _ps.Visible = true;
         }
 
         public void ShowReport(List<string> report, List<List<int>> defectChains)
@@ -87,11 +100,6 @@ namespace El.Plugin.Ui
             if (ch == null || CommandState.Lines == null) return;
             var segs = ch.Select(id => CommandState.Lines.First(l => l.Id == id)).ToList();
             DwgAccess.ZoomTo(segs);
-        }
-
-        public void Show()
-        {
-            _ps.Visible = true;
         }
 
         public void Dispose()

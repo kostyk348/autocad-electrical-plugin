@@ -141,6 +141,53 @@ namespace El.Plugin.Ui
         public DialogResult Show() => _f.ShowDialog(WindowWrapper.Acad);
     }
 
+    /// <summary>Выбор цвета ACI (1-255) с предпросмотром.</summary>
+    public sealed class AciColorDialog
+    {
+        private readonly Form _f;
+        private readonly NumericUpDown _num;
+        private readonly Panel _preview;
+        public short ColorIndex => (short)_num.Value;
+
+        public AciColorDialog(short initial = 7)
+        {
+            _f = new Form
+            {
+                Text = "Цвет слоя (ACI)",
+                Width = 260,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                StartPosition = FormStartPosition.CenterParent
+            };
+            _num = new NumericUpDown { Left = 12, Top = 14, Width = 90, Minimum = 1, Maximum = 255, Value = initial };
+            _preview = new Panel { Left = 120, Top = 12, Width = 110, Height = 26, BorderStyle = BorderStyle.FixedSingle };
+            _num.ValueChanged += (s, e) => UpdatePreview();
+            UpdatePreview();
+            var ok = new Button { Text = "OK", Left = 60, Top = 78, Width = 84 };
+            var cancel = new Button { Text = "Отмена", Left = 150, Top = 78, Width = 84 };
+            ok.DialogResult = DialogResult.OK;
+            cancel.DialogResult = DialogResult.Cancel;
+            _f.Controls.AddRange(new Control[] { _num, _preview, ok, cancel });
+            _f.AcceptButton = ok;
+            _f.CancelButton = cancel;
+        }
+
+        private void UpdatePreview()
+        {
+            try
+            {
+                var c = Autodesk.AutoCAD.Colors.Color.FromColorIndex(
+                    Autodesk.AutoCAD.Colors.ColorMethod.ByAci, (short)_num.Value);
+                _preview.BackColor = c.ColorValue;
+            }
+            catch { _preview.BackColor = Color.White; }
+        }
+
+        public DialogResult Show() => _f.ShowDialog(WindowWrapper.Acad);
+    }
+
     /// <summary>Список слепков OMNI: открыть/удалить.</summary>
     public sealed class OmniLogDialog
     {

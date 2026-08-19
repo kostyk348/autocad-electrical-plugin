@@ -202,6 +202,22 @@ namespace El.Plugin
         }
 
         // ============================================================
+        // EL-LAYER-LEGEND — парящая легенда слоёв (палитра)
+        // ============================================================
+        [CommandMethod("EL-LAYER-LEGEND")]
+        public static void ElLayerLegend()
+        {
+            try
+            {
+                if (El.Plugin.Ui.Palette.Instance == null) El.Plugin.Ui.Palette.Instance = new El.Plugin.Ui.Palette();
+                El.Plugin.Ui.Palette.Instance.Show();
+                // переключить на вкладку «Слои» — недоступно напрямую, показываем палитру
+                Ed.WriteMessage("\n; Легенда слоёв — вкладка «Слои» палитры (только используемые слои).");
+            }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-LAYER-LEGEND: " + ex.Message); Plugin.Log(ex); }
+        }
+
+        // ============================================================
         // EL-LAYER-CHAINS — кластеризация: цепи в разрезе слоёв
         // ============================================================
         [CommandMethod("EL-LAYER-CHAINS")]

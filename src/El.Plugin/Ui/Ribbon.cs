@@ -69,6 +69,7 @@ namespace El.Plugin.Ui
                 MakeButton("Объединить в полилинии", "EL-JOIN", "LINE → полилинии, контроль порядка")));
 
             _tab.Panels.Add(MakePanel("Слои",
+                MakeButton("Легенда слоёв", "EL-LAYER-LEGEND", "Парящая легенда: цвет + имя (только используемые)"),
                 MakeButton("Фильтр анализа", "EL-LAYER-FILTER", "Какие слои видит EL-CHECK/EL-TABLE/EL-TRACE"),
                 MakeButton("Создать слой", "EL-LAYER-NEW", "Имя + цвет"),
                 MakeButton("Покрасить слой", "EL-LAYER-COLOR", "Цвет слоя"),
