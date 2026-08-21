@@ -92,7 +92,11 @@ namespace El.Plugin
 
                 // диалог: наконечники/цвет/кол-во/длина
                 var wd = new El.Plugin.Ui.WireDialog();
-                if (wd.Show() != System.Windows.Forms.DialogResult.OK) return;
+                if (wd.Show() != System.Windows.Forms.DialogResult.OK)
+                {
+                    Ed.WriteMessage("\n; EL-WIRE отменено (диалог закрыт без ОК).");
+                    return;
+                }
 
                 // препятствия и маршрут
                 List<LineSeg> obstacles;
@@ -103,6 +107,7 @@ namespace El.Plugin
                     tr.Commit();
                 }
                 route = MazeRouter.Route(a, b, obstacles, 5.0, DwgAccess.DefaultTolerance);
+                Ed.WriteMessage($"\n; Маршрут: Found={route.Found}, точек={route.Points.Count}, длина={route.Length:F1} мм");
 
                 var wire = new WireRecord
                 {
@@ -130,18 +135,37 @@ namespace El.Plugin
                         ms.AppendEntity(pl);
                         tr.AddNewlyCreatedDBObject(pl, true);
                         SetWireXData(tr, pl, wire);
-                        var mid = pl.GetPointAtDist(pl.Length / 2.0);
-                        PlaceWireTag(tr, ms, mid, wire.Num, h);
-                        ed.WriteMessage($"\n; Провод №{wire.Num}: {route.Points.Count} вершин, длина {pl.Length / 1000.0:F2} м");
+                        // КОММИТ сразу — линия гарантированно сохранится,
+                        // даже если номер-тег ниже упадёт
+                        tr.Commit();
+                        Ed.WriteMessage($"\n; Провод №{wire.Num} начерчен: {route.Points.Count} вершин, длина {pl.Length / 1000.0:F2} м");
+
+                        // номер в кружке — отдельная транзакция (не сломает линию)
+                        try
+                        {
+                            using (var tr2 = doc.Database.TransactionManager.StartTransaction())
+                            {
+                                var bt2 = (BlockTable)tr2.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                                var ms2 = (BlockTableRecord)tr2.GetObject(bt2[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                                var mid = pl.GetPointAtDist(pl.Length / 2.0);
+                                PlaceWireTag(tr2, ms2, mid, wire.Num, h);
+                                tr2.Commit();
+                            }
+                        }
+                        catch (System.Exception tex)
+                        {
+                            Ed.WriteMessage($"\n! Не удалось поставить номер: {tex.Message}");
+                            Plugin.Log(tex);
+                        }
                     }
                     else
                     {
                         // пути нет — стрелки-переходы от А и Б (взаимные), провод не рисуем
                         wire.IsJump = true;
                         DrawJumpArrows(tr, ms, a, b, wire, h);
-                        ed.WriteMessage($"\n; Путь не найден — переход №{wire.Num}: стрелки от А и Б.");
+                        tr.Commit();
+                        Ed.WriteMessage($"\n; Путь не найден — переход №{wire.Num}: стрелки от А и Б.");
                     }
-                    tr.Commit();
                 }
 
                 // предложить открыть редактируемую таблицу
