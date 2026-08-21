@@ -30,6 +30,14 @@
     <ProjectReference Include="..\El.Core\El.Core.csproj" />
   </ItemGroup>
 
+  <!-- El.Core встраивается в плагин: один файл, без конфликтов версий -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <EmbeddedResource Include="..\El.Core\bin\$(Configuration)\netstandard2.0\El.Core.dll" LogicalName="El.Core.dll" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net45'">
+    <EmbeddedResource Include="..\El.Core\bin\$(Configuration)\net45\El.Core.dll" LogicalName="El.Core.dll" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="acmgd">
       <HintPath>$(AcadPath)\acmgd.dll</HintPath>

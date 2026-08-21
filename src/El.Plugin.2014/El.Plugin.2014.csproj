@@ -35,6 +35,11 @@
     <ProjectReference Include="..\El.Core\El.Core.csproj" />
   </ItemGroup>
 
+  <!-- El.Core встраивается в плагин: один файл, без конфликтов версий -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net45'">
+    <EmbeddedResource Include="..\El.Core\bin\$(Configuration)\net45\El.Core.dll" LogicalName="El.Core.dll" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="acmgd">
       <HintPath>$(Acad2014Path)\acmgd.dll</HintPath>

@@ -17,8 +17,34 @@ namespace El.Plugin
         public static readonly string LogPath = Path.Combine(
             Path.GetTempPath(), "el-plugin-errors.log");
 
+        /// <summary>
+        /// El.Core встроена в плагин. Если в процессе уже висит старая El.Core
+        /// (другая версия) — AssemblyResolve подгрузит встроенную свежую.
+        /// </summary>
+        public static void HookAssemblyResolve()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+            {
+                var name = new AssemblyName(e.Name).Name;
+                if (name == "El.Core")
+                {
+                    using (var st = Assembly.GetExecutingAssembly().GetManifestResourceStream("El.Core.dll"))
+                    {
+                        if (st != null)
+                        {
+                            byte[] b = new byte[st.Length];
+                            st.Read(b, 0, b.Length);
+                            return Assembly.Load(b);
+                        }
+                    }
+                }
+                return null;
+            };
+        }
+
         public void Initialize()
         {
+            HookAssemblyResolve();
             CommandState.LoadLayerFilter();
 
             // проверка соответствия версий El.Plugin и El.Core
@@ -33,11 +59,9 @@ namespace El.Plugin
                     try { coreVer = typeof(El.Core.GraphBuilder).Assembly.GetName().Version; }
                     catch (TypeLoadException) { coreOld = true; }
                     if (coreOld)
-                        ed0.WriteMessage("\n[Электроавтоматика] ⚠ ЗАГРУЖЕНА СТАРАЯ El.Core! Перезапустите AutoCAD, затем NETLOAD оба файла из нового installer.zip.");
-                    else if (pluginVer != coreVer)
-                        ed0.WriteMessage($"\n[Электроавтоматика] ⚠ Несоответствие версий: плагин v{pluginVer}, El.Core v{coreVer}. NETLOAD оба файла из одной папки.");
+                        ed0.WriteMessage("\n[Электроавтоматика] ⚠ Не удалось загрузить El.Core. Перезапустите AutoCAD и NETLOAD заново.");
                     else
-                        ed0.WriteMessage($"\n[Электроавтоматика] v{pluginVer} загружен (El.Core v{coreVer}).");
+                        ed0.WriteMessage($"\n[Электроавтоматика] v{pluginVer} загружен (El.Core v{coreVer}, встроена).");
                 }
             }
             catch { }
@@ -134,7 +158,7 @@ namespace El.Plugin
                 ed.WriteMessage("\n=== Электроавтоматика: диагностика ===");
                 ed.WriteMessage($"\nПлагин: {asm.GetName().Name} v{v} (net: {Environment.Version})");
                 ed.WriteMessage($"\nПуть: {asm.Location}");
-                ed.WriteMessage($"\nEl.Core: v{coreAsm} → {corePath}");
+                ed.WriteMessage($"\nEl.Core: v{coreAsm} → {(string.IsNullOrEmpty(corePath) ? "встроена в плагин" : corePath)}");
                 ed.WriteMessage($"\nУстановлен в ApplicationPlugins: {(Installer.IsInstalledLocation() ? "да" : "нет")}");
                 ed.WriteMessage($"\nЛог ошибок: {Plugin.LogPath}");
             }
