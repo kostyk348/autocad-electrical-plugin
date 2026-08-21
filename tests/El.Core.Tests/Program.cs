@@ -184,6 +184,73 @@ namespace El.Core.Tests
     }
 
     // ============================================================
+    // MazeRouter (лабиринтный роутер)
+    // ============================================================
+
+    public class MazeRouterTests
+    {
+        public void Test_Straight_Path()
+        {
+            var r = MazeRouter.Route(new Point2D(0, 0), new Point2D(100, 0),
+                                     new List<LineSeg>(), 10, 0.5);
+            Program.AssertTrue(r.Found, "путь найден");
+            Program.AssertNear(100.0, r.Length, 1e-6, "длина = 100");
+        }
+
+        public void Test_Obstacle_Avoided()
+        {
+            // вертикальная стена (50,-50)-(50,50) между A(0,0) и B(100,0) — путь обойдёт
+            var obstacles = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(50, -50), new Point2D(50, 50))
+            };
+            var r = MazeRouter.Route(new Point2D(0, 0), new Point2D(100, 0), obstacles, 10, 0.5);
+            Program.AssertTrue(r.Found, "путь найден в обход");
+            // путь не должен ПРОКАЛЫВАТЬ стену (касание её концов — допустимо)
+            bool crosses = false;
+            for (int i = 1; i < r.Points.Count; i++)
+            {
+                var pt = GraphAlgorithms.SegmentIntersect(r.Points[i - 1], r.Points[i], obstacles[0].A, obstacles[0].B);
+                if (pt == null) continue;
+                // касание концов стены — не прокол
+                if (pt.Value.Dist2(obstacles[0].A) < 1.0 || pt.Value.Dist2(obstacles[0].B) < 1.0) continue;
+                crosses = true;
+            }
+            Program.AssertTrue(!crosses, "путь не прокалывает препятствие");
+            // и длина обхода больше прямой (100)
+            Program.AssertTrue(r.Length > 100.0 - 1e-6, "обход длиннее прямой");
+        }
+
+        public void Test_Wall_NoPath_FoundFalse()
+        {
+            // полная стена от minY до maxY — пути нет
+            var obstacles = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(50, -1000), new Point2D(50, 1000))
+            };
+            var r = MazeRouter.Route(new Point2D(0, 0), new Point2D(100, 0), obstacles, 10, 0.5);
+            Program.AssertTrue(!r.Found, "стена — пути нет");
+        }
+
+        public void Test_Simplify_RemovesCollinear()
+        {
+            // путь с коллинеарной точкой; препятствие не даёт натянуть диагональ
+            var obstacles = new List<LineSeg>
+            {
+                new LineSeg(1, new Point2D(10, 5), new Point2D(10, 15))
+            };
+            var path = new List<Point2D>
+            {
+                new Point2D(0, 0), new Point2D(10, 0), new Point2D(20, 0), new Point2D(20, 20)
+            };
+            var s = MazeRouter.Simplify(path, obstacles, 0.5);
+            Program.AssertEqual(3, s.Count, "убрана коллинеарная точка, диагональ заблокирована");
+            Program.AssertNear(20, s[1].X, 1e-9, "угол в (20,0)");
+            Program.AssertNear(0, s[1].Y, 1e-9);
+        }
+    }
+
+    // ============================================================
     // LayerClusters (кластеризация по слоям)
     // ============================================================
 

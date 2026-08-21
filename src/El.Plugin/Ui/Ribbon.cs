@@ -50,8 +50,9 @@ namespace El.Plugin.Ui
                 MakeButton("Спецификация AW33", "AW33", "Постраничный сбор проводов"),
                 MakeButton("Спецификация HTML", "AW33-HTML", "В HTML-таблицу + браузер"),
                 MakeButton("Экспорт CSV", "AW33-CSV", "Спецификация в CSV"),
-                MakeButton("Провод", "DrawWire", "Полилиния + XData"),
-                MakeButton("Таблица проводов", "WireTable", "Из XData"),
+                MakeButton("Трассировка EL-WIRE", "EL-WIRE", "2 клика → провод (maze-обход препятствий) + номер; тупик → стрелки-переходы"),
+                MakeButton("Провод (ручной)", "DrawWire", "Полилиния + XData"),
+                MakeButton("Таблица проводов", "WireTable", "Из XData: наконечники/цвет/кол-во/длина"),
                 MakeButton("Узлы проводов", "WireNodes", "Кружки в вершинах"),
                 MakeButton("Адреса точек", "WireSegAddr", "Разбивка линии"),
                 MakeButton("Выноска", "WT", "Стрелка с номером")));

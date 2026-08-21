@@ -6,6 +6,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
+using El.Core;
 
 namespace El.Plugin
 {
@@ -34,6 +35,175 @@ namespace El.Plugin
                 new TypedValue(1000, dev2),
                 new TypedValue(1000, term2));
             ent.XData = rb;
+        }
+
+        private static void SetWireXData(Transaction tr, Entity ent, WireRecord w)
+        {
+            EnsureRegApp(tr);
+            var vals = w.ToXData();
+            var tvs = new TypedValue[vals.Length];
+            for (int i = 0; i < vals.Length; i++) tvs[i] = new TypedValue(1000, vals[i] ?? "");
+            ent.XData = new ResultBuffer(tvs);
+        }
+
+        /// <summary>Все провода-препятствия: LINE + сегменты LWPOLYLINE.</summary>
+        private static List<LineSeg> CollectObstacles(Transaction tr)
+        {
+            var result = DwgAccess.CollectLines(tr);
+            var bt = (BlockTable)tr.GetObject(DwgAccess.Doc.Database.BlockTableId, OpenMode.ForRead);
+            var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+            foreach (ObjectId id in ms)
+            {
+                if (id.ObjectClass.DxfName != "LWPOLYLINE") continue;
+                var pl = (Polyline)tr.GetObject(id, OpenMode.ForRead);
+                for (int i = 0; i < pl.NumberOfVertices - 1; i++)
+                {
+                    var p1 = pl.GetPoint2dAt(i);
+                    var p2 = pl.GetPoint2dAt(i + 1);
+                    result.Add(new LineSeg((int)(id.Handle.Value * 1000) + i,
+                                           new Point2D(p1.X, p1.Y), new Point2D(p2.X, p2.Y))
+                    {
+                        Layer = pl.Layer,
+                        Tag = id
+                    });
+                }
+            }
+            return result;
+        }
+
+        // ============================================================
+        // EL-WIRE — полуавтоматическая трассировка (maze-роутер)
+        // ============================================================
+        [CommandMethod("EL-WIRE")]
+        public static void ElWire()
+        {
+            try
+            {
+                var doc = DwgAccess.Doc;
+                var ed = Ed;
+                ed.WriteMessage("\n=== EL-WIRE: трассировка провода (maze) ===");
+                var pa = ed.GetPoint("\n→ Точка А: ");
+                if (pa.Status != PromptStatus.OK) return;
+                var pb = ed.GetPoint("\n→ Точка Б: ");
+                if (pb.Status != PromptStatus.OK) return;
+                var a = new Point2D(pa.Value.X, pa.Value.Y);
+                var b = new Point2D(pb.Value.X, pb.Value.Y);
+
+                // диалог: наконечники/цвет/кол-во/длина
+                var wd = new El.Plugin.Ui.WireDialog();
+                if (wd.Show() != System.Windows.Forms.DialogResult.OK) return;
+
+                // препятствия и маршрут
+                List<LineSeg> obstacles;
+                RouteResult route;
+                using (var tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    obstacles = CollectObstacles(tr);
+                    tr.Commit();
+                }
+                route = MazeRouter.Route(a, b, obstacles, 5.0, DwgAccess.DefaultTolerance);
+
+                var wire = new WireRecord
+                {
+                    Num = NextWireNumber(),
+                    Dev1 = wd.Dev1, Term1 = wd.Term1, Tip1 = wd.Tip1,
+                    Dev2 = wd.Dev2, Term2 = wd.Term2, Tip2 = wd.Tip2,
+                    Color = wd.Color, Qty = wd.Qty
+                };
+                double h = 2.5;
+
+                using (var tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    DwgAccess.EnsureLayer(tr, "WIRE", 256);
+                    DwgAccess.EnsureLayer(tr, "WIRE_NUM", 30);
+                    var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                    if (route.Found)
+                    {
+                        // провод — полилиния по маршруту
+                        var pl = new Polyline();
+                        for (int i = 0; i < route.Points.Count; i++)
+                            pl.AddVertexAt(i, new Point2d(route.Points[i].X, route.Points[i].Y), 0, 0, 0);
+                        pl.Layer = "WIRE";
+                        ms.AppendEntity(pl);
+                        tr.AddNewlyCreatedDBObject(pl, true);
+                        SetWireXData(tr, pl, wire);
+                        var mid = pl.GetPointAtDist(pl.Length / 2.0);
+                        PlaceWireTag(tr, ms, mid, wire.Num, h);
+                        ed.WriteMessage($"\n; Провод №{wire.Num}: {route.Points.Count} вершин, длина {pl.Length / 1000.0:F2} м");
+                    }
+                    else
+                    {
+                        // пути нет — стрелки-переходы от А и Б (взаимные), провод не рисуем
+                        wire.IsJump = true;
+                        DrawJumpArrows(tr, ms, a, b, wire, h);
+                        ed.WriteMessage($"\n; Путь не найден — переход №{wire.Num}: стрелки от А и Б.");
+                    }
+                    tr.Commit();
+                }
+            }
+            catch (System.Exception ex) { Ed.WriteMessage("\n! EL-WIRE: " + ex.Message); Plugin.Log(ex); }
+        }
+
+        /// <summary>
+        /// Стрелки-переходы (ГОСТ): короткий отрезок со стрелкой от точки А к точке Б
+        /// (и от Б к А — взаимно), «немного вверх», рядом номер провода. Линия не рисуется.
+        /// XData вешается на стрелку от А (для таблицы проводов).
+        /// </summary>
+        private static void DrawJumpArrows(Transaction tr, BlockTableRecord ms, Point2D a, Point2D b,
+                                           WireRecord wire, double h)
+        {
+            double len = h * 3.0;
+            double up = -30.0 * Math.PI / 180.0; // «немного вверх»
+
+            ObjectId arrowA = DrawOneArrow(tr, ms, a, b, len, up, wire.Num, h);
+            DrawOneArrow(tr, ms, b, a, len, up, wire.Num, h);
+
+            // XData на стрелке от А
+            if (!arrowA.IsNull)
+            {
+                var ent = (Entity)tr.GetObject(arrowA, OpenMode.ForWrite);
+                SetWireXData(tr, ent, wire);
+            }
+        }
+
+        private static ObjectId DrawOneArrow(Transaction tr, BlockTableRecord ms, Point2D from, Point2D to,
+                                             double len, double upAngle, int num, double h)
+        {
+            double ang = Math.Atan2(to.Y - from.Y, to.X - from.X) + upAngle;
+            var u = new Point2D(Math.Cos(ang), Math.Sin(ang));
+            var end = new Point2D(from.X + u.X * len, from.Y + u.Y * len);
+
+            var pl = new Polyline();
+            pl.AddVertexAt(0, new Point2d(from.X, from.Y), 0, 0, 0);
+            pl.AddVertexAt(1, new Point2d(end.X, end.Y), 0, 0, 0);
+            pl.Layer = "WIRE";
+            ms.AppendEntity(pl);
+            tr.AddNewlyCreatedDBObject(pl, true);
+
+            // штрихи стрелки
+            double s = h * 1.2;
+            for (int sgn = -1; sgn <= 1; sgn += 2)
+            {
+                double a2 = ang + sgn * 160.0 * Math.PI / 180.0;
+                var l2 = new Line
+                {
+                    StartPoint = new Point3d(end.X, end.Y, 0),
+                    EndPoint = new Point3d(end.X + Math.Cos(a2) * s, end.Y + Math.Sin(a2) * s, 0),
+                    Layer = "WIRE"
+                };
+                ms.AppendEntity(l2);
+                tr.AddNewlyCreatedDBObject(l2, true);
+            }
+
+            // номер рядом (над стрелкой)
+            var pos = new Point3d(end.X + u.X * (h + 1.0), end.Y + u.Y * (h + 1.0), 0);
+            var mt = new MText { Location = pos, Contents = num.ToString(), TextHeight = h, Attachment = AttachmentPoint.MiddleCenter, Layer = "WIRE_NUM" };
+            ms.AppendEntity(mt);
+            tr.AddNewlyCreatedDBObject(mt, true);
+
+            return pl.ObjectId;
         }
 
         private static List<string> GetWireXData(Entity ent)
@@ -127,13 +297,9 @@ namespace El.Plugin
             tr.AddNewlyCreatedDBObject(mt, true);
         }
 
-        private sealed class WireRecord
+        private sealed class WireRow
         {
-            public int Num;
-            public string Dev1;
-            public string Term1;
-            public string Dev2;
-            public string Term2;
+            public WireRecord W;
             public double LenM;
         }
 
@@ -145,7 +311,7 @@ namespace El.Plugin
             {
                 var doc = DwgAccess.Doc;
                 var ed = Ed;
-                var data = new List<WireRecord>();
+                var data = new List<WireRow>();
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
                 {
                     var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
@@ -156,23 +322,31 @@ namespace El.Plugin
                         var pl = (Polyline)tr.GetObject(id, OpenMode.ForRead);
                         var vals = GetWireXData(pl);
                         if (vals.Count < 5) continue;
-                        data.Add(new WireRecord { Num = int.Parse(vals[0]), Dev1 = vals[1], Term1 = vals[2], Dev2 = vals[3], Term2 = vals[4], LenM = pl.Length / 1000.0 });
+                        var w = WireRecord.FromXData(vals);
+                        double len = w.IsJump ? 0.0 : pl.Length / 1000.0;
+                        data.Add(new WireRow { W = w, LenM = len });
                     }
                     tr.Commit();
                 }
-                if (data.Count == 0) { ed.WriteMessage("\n! Проводов с XData WIRE_DATA не найдено (DrawWire)"); return; }
+                if (data.Count == 0) { ed.WriteMessage("\n! Проводов с XData WIRE_DATA не найдено (DrawWire / EL-WIRE)"); return; }
                 var pp = ed.GetPoint("\nТочка вставки таблицы: ");
                 if (pp.Status != PromptStatus.OK) return;
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
                 {
-                    var header = new[] { "№", "Откуда", "Клемма", "Куда", "Клемма", "Длина, м" };
-                    var rows = data.OrderBy(d => d.Num)
-                        .Select(d => new[] { d.Num.ToString(), d.Dev1, d.Term1, d.Dev2, d.Term2, d.LenM.ToString("F2") })
+                    var header = new[] { "№", "Откуда", "Клемма", "Нак.", "Куда", "Клемма", "Нак.", "Цвет", "Кол-во", "Длина, м", "Прим." };
+                    var rows = data.OrderBy(d => d.W.Num)
+                        .Select(d => new[]
+                        {
+                            d.W.Num.ToString(), d.W.Dev1, d.W.Term1, d.W.Tip1,
+                            d.W.Dev2, d.W.Term2, d.W.Tip2, d.W.Color, d.W.Qty.ToString(),
+                            d.W.IsJump ? "—" : d.LenM.ToString("F2"),
+                            d.W.IsJump ? "переход" : ""
+                        })
                         .ToList();
-                    DwgAccess.AddTable(tr, pp.Value, header, rows, 8, 40);
+                    DwgAccess.AddTable(tr, pp.Value, header, rows, 8, 30);
                     tr.Commit();
                 }
-                ed.WriteMessage($"\n; Таблица проводов: {data.Count} шт");
+                ed.WriteMessage($"\n; Таблица проводов: {data.Count} шт (переходов: {data.Count(d => d.W.IsJump)})");
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n! WireTable: " + ex.Message); Plugin.Log(ex); }
         }

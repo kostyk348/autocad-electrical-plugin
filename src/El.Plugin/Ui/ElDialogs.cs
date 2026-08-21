@@ -188,6 +188,94 @@ namespace El.Plugin.Ui
         public DialogResult Show() => _f.ShowDialog(WindowWrapper.Acad);
     }
 
+    /// <summary>Диалог провода: откуда/куда (устройство, клемма, наконечник), цвет, кол-во, длина.</summary>
+    public sealed class WireDialog
+    {
+        private readonly Form _f;
+        private readonly TextBox _dev1, _term1, _dev2, _term2, _len;
+        private readonly ComboBox _tip1, _tip2, _color;
+        private readonly NumericUpDown _qty;
+
+        public string Dev1 => _dev1.Text;
+        public string Term1 => _term1.Text;
+        public string Tip1 => _tip1.Text;
+        public string Dev2 => _dev2.Text;
+        public string Term2 => _term2.Text;
+        public string Tip2 => _tip2.Text;
+        public string Color => _color.Text;
+        public int Qty => (int)_qty.Value;
+        /// <summary>null — длина по геометрии; иначе — введённая (м).</summary>
+        public double? LengthM
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(_len.Text)) return null;
+                return double.TryParse(_len.Text.Replace(',', '.'),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : (double?)null;
+            }
+        }
+
+        public WireDialog(string tipDefault = "Н")
+        {
+            _f = new Form
+            {
+                Text = "Провод",
+                Width = 420,
+                Height = 330,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                StartPosition = FormStartPosition.CenterParent
+            };
+            string[] tips = { "", "Н", "Обжим", "Вилка", "Кольцо", "Лопатка", "Штырь", "Трубка", "Н/У" };
+            string[] colors = { "", "КРАСН", "СИН", "ЧЕРН", "БЕЛ", "ЖЕЛТ", "ЗЕЛ", "СЕР", "КОРИЧ", "ОРАНЖ", "ФИОЛЕТ", "РОЗОВ", "ГОЛУБ" };
+
+            int y = 12;
+            AddLabel("Откуда (устройство):", y);
+            _dev1 = new TextBox { Left = 150, Top = y - 3, Width = 240 }; y += 26;
+            AddLabel("Клемма:", y);
+            _term1 = new TextBox { Left = 150, Top = y - 3, Width = 120 };
+            AddLabel("Наконечник:", y);
+            _tip1 = Cmb(tips, tipDefault, 280, y - 3); y += 26;
+            AddLabel("Куда (устройство):", y);
+            _dev2 = new TextBox { Left = 150, Top = y - 3, Width = 240 }; y += 26;
+            AddLabel("Клемма:", y);
+            _term2 = new TextBox { Left = 150, Top = y - 3, Width = 120 };
+            AddLabel("Наконечник:", y);
+            _tip2 = Cmb(tips, tipDefault, 280, y - 3); y += 26;
+            AddLabel("Цвет:", y);
+            _color = Cmb(colors, "", 150, y - 3);
+            AddLabel("Кол-во:", y);
+            _qty = new NumericUpDown { Left = 250, Top = y - 3, Width = 60, Minimum = 1, Maximum = 999, Value = 1 }; y += 26;
+            AddLabel("Длина, м (пусто — авто):", y);
+            _len = new TextBox { Left = 150, Top = y - 3, Width = 120 }; y += 34;
+
+            var ok = new Button { Text = "ОК", Left = 200, Top = y, Width = 90 };
+            var cancel = new Button { Text = "Отмена", Left = 298, Top = y, Width = 90 };
+            ok.DialogResult = DialogResult.OK;
+            cancel.DialogResult = DialogResult.Cancel;
+            _f.Controls.AddRange(new Control[] { _dev1, _term1, _dev2, _term2, _tip1, _tip2, _color, _qty, _len, ok, cancel });
+            _f.AcceptButton = ok;
+            _f.CancelButton = cancel;
+        }
+
+        private static ComboBox Cmb(string[] items, string sel, int left, int top)
+        {
+            var c = new ComboBox { Left = left, Top = top, Width = 110, DropDownStyle = ComboBoxStyle.DropDownList };
+            foreach (var it in items) c.Items.Add(it);
+            c.SelectedItem = sel;
+            return c;
+        }
+
+        private void AddLabel(string text, int top)
+        {
+            _f.Controls.Add(new Label { Text = text, Left = 12, Top = top + 3, Width = 140 });
+        }
+
+        public DialogResult Show() => _f.ShowDialog(WindowWrapper.Acad);
+    }
+
     /// <summary>Список слепков OMNI: открыть/удалить.</summary>
     public sealed class OmniLogDialog
     {
