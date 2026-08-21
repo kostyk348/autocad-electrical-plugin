@@ -18,33 +18,15 @@ namespace El.Plugin
             Path.GetTempPath(), "el-plugin-errors.log");
 
         /// <summary>
-        /// El.Core встроена в плагин. Если в процессе уже висит старая El.Core
-        /// (другая версия) — AssemblyResolve подгрузит встроенную свежую.
+        /// El.Core слита в плагин (ILRepack) — единая сборка, конфликты версий невозможны.
         /// </summary>
         public static void HookAssemblyResolve()
         {
-            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
-            {
-                var name = new AssemblyName(e.Name).Name;
-                if (name == "El.Core")
-                {
-                    using (var st = Assembly.GetExecutingAssembly().GetManifestResourceStream("El.Core.dll"))
-                    {
-                        if (st != null)
-                        {
-                            byte[] b = new byte[st.Length];
-                            st.Read(b, 0, b.Length);
-                            return Assembly.Load(b);
-                        }
-                    }
-                }
-                return null;
-            };
+            // ничего не нужно: типы El.Core находятся в этой же сборке
         }
 
         public void Initialize()
         {
-            HookAssemblyResolve();
             CommandState.LoadLayerFilter();
 
             // проверка соответствия версий El.Plugin и El.Core
