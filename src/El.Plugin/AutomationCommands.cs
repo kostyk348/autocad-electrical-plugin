@@ -467,32 +467,46 @@ namespace El.Plugin
                 var segs = PolylineBuilder.BuildSegments(lines, DwgAccess.DefaultTolerance);
                 int created = 0;
                 int skipped = 0;
+                int errors = 0;
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
                 {
-                    var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
-                    var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
-                    foreach (var seg in segs)
+                    try
                     {
-                        if (seg.Points.Count < 2) continue;
-                        // пропускаем одиночные линии — из них полилиния не нужна
-                        if (seg.LineIds.Count == 1)
+                        var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                        var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                        foreach (var seg in segs)
                         {
-                            skipped++;
-                            continue;
+                            try
+                            {
+                                if (seg.Points.Count < 2) continue;
+                                if (seg.LineIds.Count == 1) { skipped++; continue; }
+                                var pl = new Polyline();
+                                for (int i = 0; i < seg.Points.Count; i++)
+                                    pl.AddVertexAt(i, new Point2d(seg.Points[i].X, seg.Points[i].Y), 0, 0, 0);
+                                // слой — как у первой линии сегмента
+                                var firstLine = lines.FirstOrDefault(l => l.Id == seg.LineIds[0]);
+                                if (firstLine != null) pl.Layer = firstLine.Layer;
+                                ms.AppendEntity(pl);
+                                tr.AddNewlyCreatedDBObject(pl, true);
+                                created++;
+                            }
+                            catch (System.Exception ex)
+                            {
+                                errors++;
+                                Plugin.Log(ex);
+                            }
                         }
-                        var pl = new Polyline();
-                        for (int i = 0; i < seg.Points.Count; i++)
-                            pl.AddVertexAt(i, new Point2d(seg.Points[i].X, seg.Points[i].Y), 0, 0, 0);
-                        // слой — как у первой линии
-                        var firstLine = (Line)tr.GetObject((ObjectId)lines.First(l => l.Id == seg.LineIds[0]).Tag, OpenMode.ForRead);
-                        pl.Layer = firstLine.Layer;
-                        ms.AppendEntity(pl);
-                        tr.AddNewlyCreatedDBObject(pl, true);
-                        created++;
                     }
+                    catch (System.Exception ex)
+                    {
+                        errors++;
+                        Plugin.Log(ex);
+                        Ed.WriteMessage("\n! EL-JOIN (создание): " + ex.Message);
+                    }
+                    // Commit даже если были ошибки — созданные полилинии сохраняются
                     tr.Commit();
                 }
-                Ed.WriteMessage($"\n; Полилиний создано: {created} (одиночных линий пропущено: {skipped})");
+                Ed.WriteMessage($"\n; EL-JOIN: сегментов={segs.Count}, создано={created}, одиночных пропущено={skipped}, ошибок={errors}");
 
                 if (created > 0)
                 {
@@ -501,19 +515,25 @@ namespace El.Plugin
                     var kr = Ed.GetKeywords(ask);
                     if (kr.Status == PromptStatus.OK && kr.StringResult == "Да")
                     {
+                        int removed = 0;
                         using (var tr = doc.Database.TransactionManager.StartTransaction())
                         {
                             foreach (var l in lines)
                             {
-                                var id = (ObjectId)l.Tag;
-                                if (!id.IsValid || id.IsErased) continue;
-                                var ent = (Entity)tr.GetObject(id, OpenMode.ForWrite, true);
-                                if (ent.IsErased) continue;
-                                ent.Erase();
+                                try
+                                {
+                                    var id = (ObjectId)l.Tag;
+                                    if (!id.IsValid || id.IsErased) continue;
+                                    var ent = (Entity)tr.GetObject(id, OpenMode.ForWrite, true);
+                                    if (ent.IsErased) continue;
+                                    ent.Erase();
+                                    removed++;
+                                }
+                                catch { }
                             }
                             tr.Commit();
                         }
-                        Ed.WriteMessage("\n; Исходные LINE удалены.");
+                        Ed.WriteMessage($"\n; Исходные LINE удалены: {removed}");
                     }
                 }
             }
