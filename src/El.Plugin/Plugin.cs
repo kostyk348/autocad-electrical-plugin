@@ -20,6 +20,28 @@ namespace El.Plugin
         public void Initialize()
         {
             CommandState.LoadLayerFilter();
+
+            // проверка соответствия версий El.Plugin и El.Core
+            try
+            {
+                var ed0 = Application.DocumentManager.MdiActiveDocument?.Editor;
+                if (ed0 != null)
+                {
+                    var pluginVer = Assembly.GetExecutingAssembly().GetName().Version;
+                    Version coreVer = null;
+                    bool coreOld = false;
+                    try { coreVer = typeof(El.Core.GraphBuilder).Assembly.GetName().Version; }
+                    catch (TypeLoadException) { coreOld = true; }
+                    if (coreOld)
+                        ed0.WriteMessage("\n[Электроавтоматика] ⚠ ЗАГРУЖЕНА СТАРАЯ El.Core! Перезапустите AutoCAD, затем NETLOAD оба файла из нового installer.zip.");
+                    else if (pluginVer != coreVer)
+                        ed0.WriteMessage($"\n[Электроавтоматика] ⚠ Несоответствие версий: плагин v{pluginVer}, El.Core v{coreVer}. NETLOAD оба файла из одной папки.");
+                    else
+                        ed0.WriteMessage($"\n[Электроавтоматика] v{pluginVer} загружен (El.Core v{coreVer}).");
+                }
+            }
+            catch { }
+
             try
             {
                 Ribbon.Add();
@@ -176,12 +198,20 @@ namespace El.Plugin
                 string srcDir = Path.GetDirectoryName(asmPath);
                 string bundle = BundleDir();
                 string contents = Path.Combine(bundle, "Contents");
+                // удаляем старую установку полностью — чтобы старые DLL не остались
+                try
+                {
+                    if (Directory.Exists(bundle)) Directory.Delete(bundle, true);
+                }
+                catch { }
                 Directory.CreateDirectory(contents);
 
                 CopyFile(asmPath, Path.Combine(contents, "El.Plugin.dll"));
                 string core = Path.Combine(srcDir, "El.Core.dll");
                 if (File.Exists(core))
                     CopyFile(core, Path.Combine(contents, "El.Core.dll"));
+                else
+                    ed.WriteMessage("\n[Электроавтоматика] ! El.Core.dll не найден рядом — установка будет неполной.");
 
                 string pkg = Path.Combine(bundle, "PackageContents.xml");
                 if (!File.Exists(pkg))
@@ -191,9 +221,12 @@ namespace El.Plugin
                 // ApplicationPlugins не подхватился
                 int regCount = AddRegistryAutoLoad(Path.Combine(contents, "El.Plugin.dll"));
 
+                var v = Assembly.GetExecutingAssembly().GetName().Version;
+                var cv = typeof(El.Core.GraphBuilder).Assembly.GetName().Version;
                 ed.WriteMessage($"\n[Электроавтоматика] Плагин установлен: {bundle}");
+                ed.WriteMessage($"\n[Электроавтоматика] Версии: El.Plugin v{v}, El.Core v{cv}.");
                 ed.WriteMessage($"\n[Электроавтоматика] Реестровая автозагрузка: {regCount} записей.");
-                ed.WriteMessage("\n[Электроавтоматика] Перезапустите AutoCAD — плагин загрузится автоматически.");
+                ed.WriteMessage("\n[Электроавтоматика] ПЕРЕЗАПУСТИТЕ AutoCAD — плагин загрузится автоматически.");
                 return true;
             }
             catch (System.Exception ex)
