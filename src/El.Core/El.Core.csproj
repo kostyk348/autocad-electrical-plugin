@@ -7,7 +7,9 @@
     <RootNamespace>El.Core</RootNamespace>
     <AssemblyName>El.Core</AssemblyName>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <Version>1.0.0</Version>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net45'">

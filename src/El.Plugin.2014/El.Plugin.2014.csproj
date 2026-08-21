@@ -17,7 +17,9 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <PlatformTarget>x64</PlatformTarget>
     <Acad2014Path Condition="'$(Acad2014Path)' == ''">C:\Program Files\Autodesk\AutoCAD 2014</Acad2014Path>
-    <Version>1.0.0</Version>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

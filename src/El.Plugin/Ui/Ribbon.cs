@@ -27,6 +27,13 @@ namespace El.Plugin.Ui
             var rc = ComponentManager.Ribbon;
             if (rc == null) return;
 
+            if (FindTab(rc, "EL_TOOLS_TAB") != null)
+            {
+                _tab = FindTab(rc, "EL_TOOLS_TAB");
+                _added = true;
+                return;
+            }
+
             _tab = new RibbonTab { Title = "Электроавтоматика", Id = "EL_TOOLS_TAB" };
             rc.Tabs.Add(_tab);
 
@@ -49,10 +56,12 @@ namespace El.Plugin.Ui
             _tab.Panels.Add(MakePanel("Спецификации",
                 MakeButton("Спецификация AW33", "AW33", "Постраничный сбор проводов"),
                 MakeButton("Спецификация HTML", "AW33-HTML", "В HTML-таблицу + браузер"),
-                MakeButton("Экспорт CSV", "AW33-CSV", "Спецификация в CSV"),
-                MakeButton("Трассировка EL-WIRE", "EL-WIRE", "2 клика → провод (maze-обход препятствий) + номер; тупик → стрелки-переходы"),
+                MakeButton("Экспорт CSV", "AW33-CSV", "Спецификация в CSV")));
+
+            _tab.Panels.Add(MakePanel("Провода",
+                MakeButton("Трассировка EL-WIRE", "EL-WIRE", "2 клика → провод (maze-обход) + номер; тупик → стрелки-переходы"),
                 MakeButton("Провод (ручной)", "DrawWire", "Полилиния + XData"),
-                MakeButton("Таблица проводов", "WireTable", "Из XData: наконечники/цвет/кол-во/длина"),
+                MakeButton("Таблица проводов", "WireTable", "GUI-редактор: наконечники/цвет/кол-во/длина"),
                 MakeButton("Узлы проводов", "WireNodes", "Кружки в вершинах"),
                 MakeButton("Адреса точек", "WireSegAddr", "Разбивка линии"),
                 MakeButton("Выноска", "WT", "Стрелка с номером")));
@@ -124,6 +133,17 @@ namespace El.Plugin.Ui
             try { rc.Tabs.Remove(_tab); } catch { }
             _tab = null;
             _added = false;
+        }
+
+        public static bool IsAdded() => _added && _tab != null;
+
+        private static RibbonTab FindTab(RibbonControl rc, string id)
+        {
+            foreach (var t in rc.Tabs)
+            {
+                if (t.Id == id) return t;
+            }
+            return null;
         }
     }
 }

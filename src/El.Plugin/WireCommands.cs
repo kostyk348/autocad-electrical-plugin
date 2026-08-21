@@ -7,6 +7,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using El.Core;
+using El.Plugin.Ui;
 
 namespace El.Plugin
 {
@@ -141,6 +142,15 @@ namespace El.Plugin
                         ed.WriteMessage($"\n; Путь не найден — переход №{wire.Num}: стрелки от А и Б.");
                     }
                     tr.Commit();
+                }
+
+                // предложить открыть редактируемую таблицу
+                var ask = new PromptKeywordOptions("\nОткрыть таблицу проводов (редактирование)? [Да/Нет] <Нет>: ");
+                ask.Keywords.Add("Да"); ask.Keywords.Add("Нет"); ask.Keywords.Default = "Нет";
+                var kr = Ed.GetKeywords(ask);
+                if (kr.Status == PromptStatus.OK && kr.StringResult == "Да")
+                {
+                    WireTable();
                 }
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n! EL-WIRE: " + ex.Message); Plugin.Log(ex); }
@@ -311,7 +321,7 @@ namespace El.Plugin
             {
                 var doc = DwgAccess.Doc;
                 var ed = Ed;
-                var data = new List<WireRow>();
+                var data = new List<WireRowData>();
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
                 {
                     var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
@@ -324,11 +334,20 @@ namespace El.Plugin
                         if (vals.Count < 5) continue;
                         var w = WireRecord.FromXData(vals);
                         double len = w.IsJump ? 0.0 : pl.Length / 1000.0;
-                        data.Add(new WireRow { W = w, LenM = len });
+                        data.Add(new WireRowData { W = w, LenM = len, Id = id, IsJump = w.IsJump });
                     }
                     tr.Commit();
                 }
                 if (data.Count == 0) { ed.WriteMessage("\n! Проводов с XData WIRE_DATA не найдено (DrawWire / EL-WIRE)"); return; }
+
+                // GUI-редактор: наконечники/цвет/кол-во/длина + сохранение в XData
+                var dlg = new El.Plugin.Ui.WireTableDialog(data);
+                var dr = dlg.Show();
+                if (dr != System.Windows.Forms.DialogResult.OK && dr != System.Windows.Forms.DialogResult.Cancel)
+                    return;
+                if (dlg.Saved) ed.WriteMessage("\n; Изменения сохранены в чертёж.");
+                if (!dlg.InsertTable) return;
+
                 var pp = ed.GetPoint("\nТочка вставки таблицы: ");
                 if (pp.Status != PromptStatus.OK) return;
                 using (var tr = doc.Database.TransactionManager.StartTransaction())
@@ -346,7 +365,7 @@ namespace El.Plugin
                     DwgAccess.AddTable(tr, pp.Value, header, rows, 8, 30);
                     tr.Commit();
                 }
-                ed.WriteMessage($"\n; Таблица проводов: {data.Count} шт (переходов: {data.Count(d => d.W.IsJump)})");
+                ed.WriteMessage($"\n; Таблица проводов вставлена: {data.Count} шт (переходов: {data.Count(d => d.W.IsJump)})");
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n! WireTable: " + ex.Message); Plugin.Log(ex); }
         }

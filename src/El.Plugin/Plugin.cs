@@ -318,6 +318,30 @@ namespace El.Plugin
             Installer.Install(ed);
         }
 
+        /// <summary>Пересоздать вкладку ленты + диагностика.</summary>
+        [CommandMethod("EL-RIBBON")]
+        public static void ShowRibbon()
+        {
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc == null) return;
+            var ed = doc.Editor;
+            try
+            {
+                Ribbon.Remove();
+                Ribbon.Add();
+                if (El.Plugin.Ui.Ribbon.IsAdded())
+                    ed.WriteMessage("\n[Электроавтоматика] Вкладка «Электроавтоматика» создана на ленте.");
+                else
+                    ed.WriteMessage("\n[Электроавтоматика] Лента недоступна (RibbonControl=null). " +
+                                    "Включите ленту (команда RIBBON) или используйте команды вручную.");
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage("\n! EL-RIBBON: " + ex.Message);
+                Plugin.Log(ex);
+            }
+        }
+
         /// <summary>Диагностика установки: где бандл, реестр, XML.</summary>
         [CommandMethod("EL-INSTALL-STATUS")]
         public static void InstallStatus()
