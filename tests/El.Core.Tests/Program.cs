@@ -336,6 +336,69 @@ namespace El.Core.Tests
     }
 
     // ============================================================
+    // TableAnalyzer + Aw33HtmlReport
+    // ============================================================
+
+    public class TableTests
+    {
+        private static TableData Tbl(params string[][] rows)
+        {
+            var t = new TableData();
+            foreach (var r in rows) t.Cells.Add(new List<string>(r));
+            return t;
+        }
+
+        public void Test_TryParseNum()
+        {
+            Program.AssertTrue(TableAnalyzer.TryParseNum("5", out double v) && v == 5, "5");
+            Program.AssertTrue(TableAnalyzer.TryParseNum("5,5", out v) && v == 5.5, "5,5");
+            Program.AssertTrue(TableAnalyzer.TryParseNum("12.5 м", out v) && v == 12.5, "12.5 м");
+            Program.AssertTrue(TableAnalyzer.TryParseNum("3 шт", out v) && v == 3, "3 шт");
+            Program.AssertTrue(!TableAnalyzer.TryParseNum("КРАСН", out v), "не число");
+            Program.AssertTrue(!TableAnalyzer.TryParseNum("", out v), "пусто");
+        }
+
+        public void Test_AnalyzeColumns_Sums()
+        {
+            var t = Tbl(
+                new[] { "Цвет", "Длина, м" },
+                new[] { "КРАСН", "5" },
+                new[] { "СИН", "2,5" },
+                new[] { "ЧЕРН", "—" });
+            var cols = TableAnalyzer.AnalyzeColumns(t);
+            Program.AssertEqual(2, cols.Count);
+            Program.AssertTrue(cols[0].Numbers == 0, "колонка цветов без чисел");
+            Program.AssertTrue(cols[1].Numbers == 2, "2 числа в колонке длины");
+            Program.AssertNear(7.5, cols[1].Sum, 1e-9, "сумма 5+2.5");
+            Program.AssertNear(2.5, cols[1].Min, 1e-9);
+            Program.AssertNear(5.0, cols[1].Max, 1e-9);
+        }
+
+        public void Test_HtmlReport_PagesAndCalc()
+        {
+            var page = Aw33Parser.ParsePage(new List<Aw33Parser.RawText>
+            {
+                Aw33Tests.T(100, 0, "1,5 мм²"),
+                Aw33Tests.T(100, 50, "КРАСН"),
+                Aw33Tests.T(100, 100, "5 м"),
+            });
+            page.Tables.Add(Tbl(
+                new[] { "Наименование", "Кол-во" },
+                new[] { "Клемма", "12" },
+                new[] { "Реле", "4" }));
+
+            var html = Aw33HtmlReport.Build(new List<Aw33PageResult> { page }, "Тест");
+            Program.AssertTrue(html.Contains("Лист 1"), "заголовок листа");
+            Program.AssertTrue(html.Contains("Таблица 1"), "таблица-картинка");
+            Program.AssertTrue(html.Contains("Клемма"), "ячейка таблицы");
+            Program.AssertTrue(html.Contains("Расчёт по таблице"), "блок расчёта");
+            Program.AssertTrue(html.Contains("сумма=<b>16.00</b>"), "сумма колонки 12+4");
+            Program.AssertTrue(html.Contains("ФИНАЛЬНАЯ СВОДНАЯ"), "сводная");
+            Program.AssertTrue(html.Contains("ИТОГО"), "итог");
+        }
+    }
+
+    // ============================================================
     // Diff спецификаций (SpecDiff)
     // ============================================================
 

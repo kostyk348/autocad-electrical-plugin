@@ -110,6 +110,119 @@ namespace El.Core
         private static string H(string s) => s == null ? "" : s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 
+    /// <summary>
+    /// HTML-отчёт спецификации по страницам: каждая страница показывает
+    /// исходные таблицы («картинки»), расчёт под ними (суммы числовых колонок),
+    /// итоги AW33 по странице; в конце — финальная сводная таблица.
+    /// </summary>
+    public static class Aw33HtmlReport
+    {
+        public static string Build(IReadOnlyList<Aw33PageResult> pages, string title = "Спецификация проводов")
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<!DOCTYPE html><html lang=\"ru\"><head><meta charset=\"utf-8\">");
+            sb.AppendLine($"<title>{E(title)}</title><style>");
+            sb.AppendLine("  body{font-family:'Segoe UI',Arial,sans-serif;margin:16px;color:#222}");
+            sb.AppendLine("  h1{font-size:20px;margin:0 0 2px}.sub{color:#666;font-size:13px;margin-bottom:14px}");
+            sb.AppendLine("  h2{font-size:15px;border-bottom:2px solid #1a4f8b;padding-bottom:3px;margin-top:22px}");
+            sb.AppendLine("  h3{font-size:13px;margin:10px 0 4px;color:#1a4f8b}");
+            sb.AppendLine("  table{border-collapse:collapse;width:100%;margin-bottom:10px}");
+            sb.AppendLine("  th,td{border:1px solid #999;padding:3px 8px;font-size:12px;text-align:left}");
+            sb.AppendLine("  th{background:#e8e8e8;font-weight:600}");
+            sb.AppendLine("  tr:nth-child(even) td{background:#f6f6f6}");
+            sb.AppendLine("  .num{text-align:right}.sum{background:#fff8dc!important;font-weight:600}");
+            sb.AppendLine("  .calc{background:#eef4fb;border:1px solid #1a4f8b;border-radius:4px;padding:6px 10px;margin:4px 0 12px;font-size:12px}");
+            sb.AppendLine("  .kpi{display:inline-block;background:#eef4fb;border:1px solid #1a4f8b;border-radius:4px;padding:6px 12px;margin:0 6px 6px 0}");
+            sb.AppendLine("  .kpi b{font-size:16px;display:block}");
+            sb.AppendLine("</style></head><body>");
+            sb.AppendLine($"<h1>{E(title)}</h1>");
+            sb.AppendLine($"<div class=\"sub\">Сформировано {DateTime.Now:dd.MM.yyyy HH:mm} · листов: {pages.Count}</div>");
+
+            var all = Aw33Parser.Merge(pages);
+            double totalLenM = all.Wires.Sum(w => w.LengthCm) / 100.0;
+            sb.AppendLine("<div>");
+            sb.AppendLine($"<span class=\"kpi\"><b>{pages.Count}</b>листов</span>");
+            sb.AppendLine($"<span class=\"kpi\"><b>{all.Wires.Count}</b>типов проводов</span>");
+            sb.AppendLine($"<span class=\"kpi\"><b>{totalLenM.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} м</b>общая длина</span>");
+            sb.AppendLine($"<span class=\"kpi\"><b>{all.Terms.Count}</b>типов деталей</span>");
+            sb.AppendLine("</div>");
+
+            int pi = 0;
+            foreach (var page in pages)
+            {
+                pi++;
+                sb.AppendLine($"<h2>Лист {pi}</h2>");
+
+                if (page.Tables.Count > 0)
+                {
+                    int ti = 0;
+                    foreach (var tbl in page.Tables)
+                    {
+                        ti++;
+                        sb.AppendLine($"<h3>Таблица {ti}</h3>");
+                        sb.AppendLine("<table>");
+                        foreach (var row in tbl.Cells)
+                        {
+                            sb.Append("<tr>");
+                            foreach (var cell in row)
+                                sb.Append($"<td>{E(cell)}</td>");
+                            sb.AppendLine("</tr>");
+                        }
+                        sb.AppendLine("</table>");
+                        var cols = TableAnalyzer.AnalyzeColumns(tbl);
+                        var numeric = cols.Where(c => c.HasNumbers).ToList();
+                        if (numeric.Count > 0)
+                        {
+                            sb.AppendLine("<div class=\"calc\"><b>Расчёт по таблице:</b> ");
+                            foreach (var c in numeric)
+                            {
+                                string head = (c.Index < tbl.Cols && tbl.Rows > 0 && c.Index < tbl.Cells[0].Count)
+                                    ? tbl.Cells[0][c.Index] : "";
+                                sb.Append($"колонка «{E(head)}»: чисел={c.Numbers}, сумма=<b>{c.Sum.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}</b>, мин={c.Min.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}, макс={c.Max.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}; ");
+                            }
+                            sb.AppendLine("</div>");
+                        }
+                    }
+                }
+                else
+                {
+                    sb.AppendLine("<div class=\"sub\">— таблиц на листе не выделено —</div>");
+                }
+
+                if (page.Wires.Count > 0)
+                {
+                    sb.AppendLine("<h3>Провода (расчёт AW33)</h3>");
+                    sb.AppendLine("<table><tr><th>Марка / Цвет</th><th>Сечение</th><th class=\"num\">Кол-во</th><th class=\"num\">Длина, см</th><th class=\"num\">Длина, м</th></tr>");
+                    foreach (var w in page.Wires)
+                        sb.AppendLine($"<tr><td>{E(w.Color)}</td><td>{E(w.Size)}</td><td class=\"num\">{w.Qty}</td><td class=\"num\">{w.LengthCm.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}</td><td class=\"num\">{(w.LengthCm / 100).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}</td></tr>");
+                    sb.AppendLine("</table>");
+                }
+            }
+
+            sb.AppendLine("<h2>ФИНАЛЬНАЯ СВОДНАЯ</h2>");
+            sb.AppendLine("<h3>Провода (все листы)</h3>");
+            sb.AppendLine("<table><tr><th>Марка / Цвет</th><th>Сечение</th><th class=\"num\">Кол-во</th><th class=\"num\">Длина, см</th><th class=\"num\">Длина, м</th></tr>");
+            foreach (var w in all.Wires)
+                sb.AppendLine($"<tr><td>{E(w.Color)}</td><td>{E(w.Size)}</td><td class=\"num\">{w.Qty}</td><td class=\"num\">{w.LengthCm.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}</td><td class=\"num\">{(w.LengthCm / 100).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}</td></tr>");
+            sb.AppendLine($"<tr class=\"sum\"><td colspan=\"4\">ИТОГО</td><td class=\"num\">{totalLenM.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} м</td></tr>");
+            sb.AppendLine("</table>");
+
+            if (all.Terms.Count > 0)
+            {
+                sb.AppendLine("<h3>Детали (все листы)</h3>");
+                sb.AppendLine("<table><tr><th>Наименование</th><th class=\"num\">Кол-во, шт</th></tr>");
+                foreach (var t in all.Terms)
+                    sb.AppendLine($"<tr><td>{E(t.Name)}</td><td class=\"num\">{t.Qty}</td></tr>");
+                sb.AppendLine("</table>");
+            }
+
+            sb.AppendLine("</body></html>");
+            return sb.ToString();
+        }
+
+        private static string E(string s) => s == null ? "" : s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+    }
+
     /// <summary>Данные для единого отчёта по чертежу/проекту.</summary>
     public sealed class ReportData
     {

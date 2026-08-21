@@ -164,7 +164,7 @@ namespace El.Plugin
         }
 
         // ============================================================
-        // AW33-HTML — спецификация в HTML + открытие в браузере
+        // AW33-HTML — спецификация в HTML (страницы + таблицы + расчёт + сводная)
         // ============================================================
         [CommandMethod("AW33-HTML")]
         public static void Aw33Html()
@@ -172,18 +172,38 @@ namespace El.Plugin
             try
             {
                 var pages = new List<Aw33PageResult>();
-                Ed.WriteMessage("\n=== AW33-HTML: выделяй тексты листов. Enter — генерация HTML ===");
+                Ed.WriteMessage("\n=== AW33-HTML: выделяй тексты И таблицы листов. Enter — генерация HTML ===");
+                Ed.WriteMessage("\n(выделение захватывает TEXT/MTEXT и объекты TABLE)");
                 while (true)
                 {
                     Ed.WriteMessage("\nВыделите лист (Enter — готово): ");
                     var sr = Ed.GetSelection(new PromptSelectionOptions());
                     if (sr.Status != PromptStatus.OK) break;
                     var raws = new List<Aw33Parser.RawText>();
+                    var page = new Aw33PageResult();
                     using (var tr = DwgAccess.Doc.Database.TransactionManager.StartTransaction())
                     {
                         foreach (var id in sr.Value.GetObjectIds())
                         {
                             var ent = (Entity)tr.GetObject(id, OpenMode.ForRead);
+                            if (ent is Table tbl)
+                            {
+                                // таблица AutoCAD — «картинка» страницы
+                                var td = new TableData();
+                                int rows = tbl.Rows.Count, cols = tbl.Columns.Count;
+                                for (int r = 0; r < rows; r++)
+                                {
+                                    var row = new List<string>();
+                                    for (int c = 0; c < cols; c++)
+                                    {
+                                        try { row.Add(tbl.Cells[r, c].TextString ?? ""); }
+                                        catch { row.Add(""); }
+                                    }
+                                    td.Cells.Add(row);
+                                }
+                                if (td.Rows > 0) page.Tables.Add(td);
+                                continue;
+                            }
                             string text = ent is DBText dt ? dt.TextString : ent is MText mt ? mt.Contents : null;
                             if (text == null) continue;
                             Point3d pos = ent is DBText d2 ? d2.Position : ent is MText m2 ? m2.Location : default;
@@ -191,14 +211,13 @@ namespace El.Plugin
                         }
                         tr.Commit();
                     }
-                    pages.Add(Aw33Parser.ParsePage(raws));
+                    var parsed = Aw33Parser.ParsePage(raws);
+                    foreach (var w in parsed.Wires) page.Wires.Add(w);
+                    foreach (var t in parsed.Terms) page.Terms.Add(t);
+                    pages.Add(page);
+                    Ed.WriteMessage($"\n; Лист {pages.Count}: проводов={page.Wires.Count}, таблиц={page.Tables.Count}");
                 }
-                var total = Aw33Parser.Merge(pages);
-                if (total.Wires.Count == 0 && total.Terms.Count == 0)
-                {
-                    Ed.WriteMessage("\n! Данные не собраны.");
-                    return;
-                }
+                if (pages.Count == 0) { Ed.WriteMessage("\n! Ничего не выделено."); return; }
                 var dlg = new System.Windows.Forms.SaveFileDialog
                 {
                     Filter = "HTML (*.html)|*.html",
@@ -206,7 +225,7 @@ namespace El.Plugin
                 };
                 if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
                 string dwg = Path.GetFileName(DwgAccess.Doc.Database.Filename);
-                string html = HtmlExporter.Aw33ToHtml(total, $"Спецификация — {dwg}");
+                string html = Aw33HtmlReport.Build(pages, $"Спецификация — {dwg}");
                 File.WriteAllText(dlg.FileName, html, new System.Text.UTF8Encoding(true));
                 Ed.WriteMessage($"\n; HTML сохранён: {dlg.FileName}");
                 try { Process.Start(dlg.FileName); } catch { }

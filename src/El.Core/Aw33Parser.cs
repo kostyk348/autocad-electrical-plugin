@@ -28,6 +28,8 @@ namespace El.Core
     {
         public List<WireRow> Wires { get; } = new List<WireRow>();
         public List<TermRow> Terms { get; } = new List<TermRow>();
+        /// <summary>Исходные таблицы AutoCAD на странице (для «картинки» в HTML).</summary>
+        public List<TableData> Tables { get; } = new List<TableData>();
     }
 
     /// <summary>
