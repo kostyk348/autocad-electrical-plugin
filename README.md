@@ -1,5 +1,8 @@
 # Electrical Tools — плагин AutoCAD
 
+[![Release](https://img.shields.io/github/v/release/kostyk348/autocad-electrical-plugin?sort=semver&color=blue)](https://github.com/kostyk348/autocad-electrical-plugin/releases)
+[![Last commit](https://img.shields.io/github/last-commit/kostyk348/autocad-electrical-plugin?branch=master)](https://github.com/kostyk348/autocad-electrical-plugin/commits/master)
+
 .NET-плагин для AutoCAD **2024** и **2014**: топология электрических схем,
 аудит, спецификации проводов, BOM, сравнение ревизий — с лентой,
 контекстными меню и палитрой.
