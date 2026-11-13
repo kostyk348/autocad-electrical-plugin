@@ -1,11 +1,18 @@
+<div align="center">
+
+<img src="docs/banner.svg" alt="autocad-electrical-plugin banner" width="1000">
+
 # Electrical Tools — плагин AutoCAD
+
+### .NET-плагин для AutoCAD 2024 и 2014: топология электрических схем, аудит, спецификации проводов, BOM, сравнение ревизий — с лентой, контекстными меню и…
 
 [![Release](https://img.shields.io/github/v/release/kostyk348/autocad-electrical-plugin?sort=semver&color=blue)](https://github.com/kostyk348/autocad-electrical-plugin/releases)
 [![Last commit](https://img.shields.io/github/last-commit/kostyk348/autocad-electrical-plugin?branch=master)](https://github.com/kostyk348/autocad-electrical-plugin/commits/master)
 
-.NET-плагин для AutoCAD **2024** и **2014**: топология электрических схем,
-аудит, спецификации проводов, BOM, сравнение ревизий — с лентой,
-контекстными меню и палитрой.
+</div>
+
+---
+
 
 > LISP-версии инструментов: [el-tools](https://github.com/kostyk348/el-tools) · [omni](https://github.com/kostyk348/omni)
 
