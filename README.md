@@ -33,19 +33,61 @@
 | **Аудит** | `EL-CHECK`, `EL-CROSSING` (X-пересечения), `EL-LOOPS`, `EL-BOTTLENECK`, `EL-STATS`, `EL-COLOR-CHAINS` |
 | **Спецификации** | `AW33` (провода, длина × кол-во), `AW33-HTML`, `AW33-CSV`, `DrawWire`, `WireTable`, `WireNodes`, `WireSegAddr`, `WT` |
 | **Автоматизация** | `EL-JOIN` (LINE → полилинии), `EL-BOM`, `EL-TITLE` (штамп), `EL-SHEET-LIST` (реестр листов), `EL-XREF-LIST`, `EL-AUTOTAG` (номера цепей) |
-| **OMNI (версии)** | `OMNI-SNAP`, `OMNI-LOG`, `OMNI-DIFF`, `OMNI-CLEAR`, `OMNI-TOGGLE`, `OMNI-NOTE` |
+| **OMNI (версии)** | `OMNI-SNAP`, `OMNI-HISTORY`, `OMNI-ARCHIVE`, `OMNI-RESTORE`, `OMNI-LOG`, `OMNI-DIFF`, `OMNI-CLEAR`, `OMNI-TOGGLE`, `OMNI-NOTE` |
 
 Интерфейс: вкладка ленты **«Электроавтоматика»** (6 панелей), контекстные меню по типу объекта (LINE/TEXT/пусто), палитра `EL-PALETTE` (дефекты с зумом).
+
+## OMNI — история ревизий чертежа
+
+Слепки DWG лежат рядом с файлом, в `_OMNI_HISTORY\`, и записаны в цепочку с контрольными суммами:
+
+```
+_OMNI_HISTORY\
+├── history.jsonl                 манифест: файл, время, автор, описание, размер, sha256, prev→next
+├── 20251116.143012.512_user_добавил кабель_щит.dwg
+└── archive\2025-11.zip           старые слепки, сжатые ZIP
+```
+
+| Команда | Что делает |
+|---|---|
+| `OMNI-SNAP` | слепок + запись в манифест (sha256 файла и цепочка `prev→next`); при переполнении — авто-сжатие |
+| `OMNI-HISTORY` | список ревизий и проверка целостности цепочки: если манифест правили руками, покажет запись, на которой цепочка рвётся |
+| `OMNI-ARCHIVE` | спросит, сколько последних слепков оставить распакованными, остальные упакует в `archive\ГГГГ-ММ.zip` и удалит оригиналы (после проверки, что запись в архиве есть) |
+| `OMNI-RESTORE` | откат к выбранной ревизии; сначала делает страховочный слепок текущего состояния (`before-restore`), поэтому откат всегда обратим; ревизию достаёт и из ZIP |
+| `OMNI-LOG` / `OMNI-DIFF` / `OMNI-CLEAR` / `OMNI-TOGGLE` | список слепков, наложение ревизии XREF'ом с подсветкой, снятие наложения, переключение его слоёв |
+| `OMNI-NOTE` | заметка на чертеже (окружность + текст на слое `OMNI_NOTES`) |
+
+Почему так: полный слепок DWG — единственный формат, который открывается в любой версии AutoCAD и не зависит от плагина. Манифест с цепочкой даёт «кто, когда, что и не подменили ли»; ZIP — чтобы история не занимала диск (DWG сжимается в разы).
+
+## Надёжность: ничего не зависает
+
+У каждой потенциально тяжёлой операции есть верхняя граница — это проверяется тестами, а не обещаниями:
+
+| Место | Граница |
+|---|---|
+| `MazeRouter.Route` (BFS по сетке) | ≤ 4 000 000 ячеек (`MaxGridCells`); при большем разбросе точек шаг сетки автоматически укрупняется, `RouteResult.GridCoarsened` / `CellUsed` / `GridCells` возвращают фактические значения |
+| блокировка препятствий | ≤ 4096 проб на отрезок (`MaxSamplesPerObstacle`) |
+| `MazeRouter.Simplify` (string pulling) | ≤ 2 000 000 проверок «отрезок свободен» (`MaxSimplifyTests`), затем оставшиеся точки идут без сглаживания |
+| `PolylineBuilder` (обход цепочек) | каждое ребро помечается использованным на входе в цикл → итераций не больше числа рёбер |
+| `Revisions.ReadManifest` | ≤ 100 000 записей, чтение потоком |
+| `Revisions.PlanRetention` / `OMNI-ARCHIVE` | ≤ 200 файлов за проход (`MaxArchiveBatch`), ≤ 5000 при сканировании папки |
+| `Revisions.Archive` | удаляет оригинал только после записи в ZIP и сверки длины |
+| `OMNI-SNAP` / `OMNI-RESTORE` | манифест пишется последним; откат не начинается, если страховочный слепок не создан |
+
+Тесты `MazeRouter_HugeSpanIsBounded`, `MazeRouter_ManyObstaclesIsBounded`, `Simplify_LongPathIsBounded`, `Retention_PlanIsFastOnLargeHistory` держат эти потолки: пропадёт граница — упадут тесты, а не AutoCAD.
 
 ## Сборка и тесты
 
 ```
-dotnet build src/El.Plugin/El.Plugin.csproj -c Release          # 2024 (net48)
-dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release -p:Acad2014Path="...\refs\2014"   # 2014 (net45)
-dotnet run --project tests/El.Core.Tests                         # 33 теста
+dotnet build src/El.Core/El.Core.csproj -c Release               # ядро (netstandard2.0 + net45)
+dotnet build src/El.Plugin/El.Plugin.csproj -c Release           # 2024 (net48)
+dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release -p:Acad2014Path="C:/refs/2014"   # 2014 (net45)
+dotnet run --project tests/El.Core.Tests                         # 63 теста
 ```
 
-Ядро (`El.Core`) — без зависимостей от AutoCAD: граф (SpatialGrid, O(n)), BFS, парсер AW33, пересечения, полилинии, diff, HTML-отчёты.
+Плагин собирается двумя способами: если AutoCAD установлен — против его DLL (`AcadPath`) с ILRepack в одну сборку; если нет (CI, новый компьютер) — против NuGet-пакета `AutoCAD.NET 24.3.0`, без установленного AutoCAD. Переключается автоматически, вручную — `-p:AcadLocal=true|false`.
+
+Ядро (`El.Core`) — без зависимостей от AutoCAD: граф (SpatialGrid, O(n)), BFS, лабиринтный роутер, парсер AW33, пересечения, полилинии, diff, история ревизий (именование, хеш-цепочка, ZIP), HTML-отчёты.
 
 ## Лицензия
 

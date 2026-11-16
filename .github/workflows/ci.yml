@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: Core + tests (no AutoCAD needed)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Build El.Core (netstandard2.0 + net45)
+        run: dotnet build src/El.Core/El.Core.csproj -c Release --nologo
+
+      - name: Tests — topology, AW33, diff, OMNI revision store, bounded operations
+        run: dotnet run --project tests/El.Core.Tests -c Release --nologo
+
+  plugin-2024:
+    name: Plugin build (AutoCAD 2024 API from NuGet)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Build El.Plugin against AutoCAD.NET 24.3.0 (no AutoCAD install on the runner)
+        run: dotnet build src/El.Plugin/El.Plugin.csproj -c Release --nologo -p:AcadLocal=false
+
+      - name: Verify the command surface is actually inside the built assembly
+        shell: pwsh
+        run: |
+          $dll = "src/El.Plugin/bin/Release/net48/El.Plugin.dll"
+          if (!(Test-Path $dll)) { throw "El.Plugin.dll was not produced" }
+          $size = (Get-Item $dll).Length
+          if ($size -lt 50000) { throw "El.Plugin.dll looks truncated ($size bytes)" }
+          $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes((Resolve-Path $dll)))
+          $expected = @(
+            'EL-TRACE','EL-CHECK','EL-REPORT','EL-PATH','EL-WHATIF','EL-LOOPS','EL-BOTTLENECK',
+            'AW33','AW33-CSV','AW33-HTML','DrawWire','WireTable','WireNodes',
+            'OMNI-SNAP','OMNI-HISTORY','OMNI-ARCHIVE','OMNI-RESTORE','OMNI-DIFF','OMNI-LOG',
+            'OMNI-CLEAR','OMNI-TOGGLE','OMNI-NOTE'
+          )
+          $missing = @($expected | Where-Object { $text -notmatch [regex]::Escape($_) })
+          if ($missing.Count -gt 0) { throw "commands missing from the DLL: $($missing -join ', ')" }
+          Write-Host "all $($expected.Count) commands present in $size bytes"
