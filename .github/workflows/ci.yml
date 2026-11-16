@@ -53,3 +53,16 @@ jobs:
           $missing = @($expected | Where-Object { $text -notmatch [regex]::Escape($_) })
           if ($missing.Count -gt 0) { throw "commands missing from the DLL: $($missing -join ', ')" }
           Write-Host "all $($expected.Count) commands present in $size bytes"
+
+  plugin-2026:
+    name: Plugin build (AutoCAD 2026 API, .NET 8)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build El.Plugin.2026 against AutoCAD.NET 26.0.0
+        run: dotnet build src/El.Plugin.2026/El.Plugin.2026.csproj -c Release --nologo
