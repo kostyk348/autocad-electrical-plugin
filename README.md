@@ -103,6 +103,14 @@ dotnet run --project tests/El.Core.Tests                         # 79 тесто
 
 Плагин собирается двумя способами: если AutoCAD установлен — против его DLL (`AcadPath`) с ILRepack в одну сборку; если нет (CI, новый компьютер) — против NuGet-пакета `AutoCAD.NET 24.3.0`, без установленного AutoCAD. Переключается автоматически, вручную — `-p:AcadLocal=true|false`.
 
+| Версия AutoCAD | Серия | Платформа | Проект | Пакет managed-API |
+|---|---|---|---|---|
+| 2021–2024 | R24.0–R24.3 | .NET Framework 4.8 | `src/El.Plugin` | `AutoCAD.NET 24.3.0` (nuget.org) |
+| 2025–2026 | R25.0–R25.1 | .NET 8 | `src/El.Plugin.2025` | `AutoCAD.NET 25.0.0` — пакет зависит от `AutoCAD.NET.Core 25.0.0-V058`, которого нет на nuget.org: нужен фид `https://nuget.autodesk.com/v3/index.json` или установленный AutoCAD 2025+ |
+| 2027 | R26.0 | .NET 10 | `src/El.Plugin.2027` | `AutoCAD.NET 26.0.0` (nuget.org) |
+
+Сборки 2024 и 2027 проверяются в CI на чистом раннере; сборка 2025/2026 — локально на машине с AutoCAD 2025+ (`dotnet build src/El.Plugin.2025/El.Plugin.2025.csproj -c Release`), потому что её managed-API нет в публичном NuGet в виде, разрешаемом без фида Autodesk.
+
 Ядро (`El.Core`) — без зависимостей от AutoCAD: граф (SpatialGrid, O(n)), BFS, лабиринтный роутер, парсер AW33, пересечения, полилинии, diff, история ревизий (именование, хеш-цепочка, ZIP), HTML-отчёты.
 
 ## Лицензия

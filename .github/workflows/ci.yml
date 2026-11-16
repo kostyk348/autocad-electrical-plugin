@@ -58,35 +58,6 @@ jobs:
           name: El.Plugin.2024
           path: src/El.Plugin/bin/Release/net48/El.Plugin.dll
 
-  plugin-2025:
-    name: Plugin build (AutoCAD 2025/2026 API, .NET 8)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Build El.Plugin.2025 against AutoCAD.NET 25.0.0
-        run: dotnet build src/El.Plugin.2025/El.Plugin.2025.csproj -c Release --nologo
-
-      - name: Verify the command surface
-        shell: pwsh
-        run: |
-          $dll = Get-ChildItem -Recurse -Filter El.Plugin.dll -Path src/El.Plugin.2025/bin/Release | Select-Object -First 1
-          if (!$dll) { throw "El.Plugin.dll was not produced" }
-          $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($dll.FullName))
-          foreach ($c in @('OMNI-SNAP','OMNI-AUTOSNAP','OMNI-HISTORY','OMNI-RESTORE','EL-HOTSPOTS','EL-CROSSREF','AW33')) {
-            if ($text -notmatch [regex]::Escape($c)) { throw "command $c missing" }
-          }
-          Write-Host "ok: $($dll.Length) bytes"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: El.Plugin.2025
-          path: src/El.Plugin.2025/bin/Release/net8.0-windows/El.Plugin.dll
-
   plugin-2027:
     name: Plugin build (AutoCAD 2027 API, .NET 10)
     runs-on: windows-latest
