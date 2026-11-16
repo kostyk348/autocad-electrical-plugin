@@ -8,9 +8,9 @@
     <AssemblyName>El.Plugin</AssemblyName>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <PlatformTarget>x64</PlatformTarget>
-    <Version>1.9.0</Version>
-    <AssemblyVersion>1.9.0.0</AssemblyVersion>
-    <FileVersion>1.9.0.0</FileVersion>
+    <Version>1.10.0</Version>
+    <AssemblyVersion>1.10.0.0</AssemblyVersion>
+    <FileVersion>1.10.0.0</FileVersion>
 
     <!-- Where the AutoCAD managed assemblies live. Only used when the folder exists. -->
     <AcadPath Condition="'$(AcadPath)' == ''">C:\Program Files\Autodesk\AutoCAD 2024</AcadPath>
