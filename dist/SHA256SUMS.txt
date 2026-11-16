@@ -1,3 +1,4 @@
+a5e6fa177d52db458134409cfee1e382ffd141b31e46d2e2f959faae68a3e05c  El.Tools.Setup.exe
 52aab77ada4495cfbfe75d72b39e0479fb756bc0efc4c573367934314aaf457b  El.Plugin.2024.bundle.zip
 bdf0bc9b45ed87ed69bc0d5b5b206492068f83a410c12420aafcbe23f2201c82  El.Plugin.2024.installer.zip
 c42e15ef41a926a651948380f5cf4e064818f0ce951a0a5b0fdea7410390b79e  El.Plugin.2027.bundle.zip
