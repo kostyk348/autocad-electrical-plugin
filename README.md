@@ -30,7 +30,7 @@
 |---|---|
 | **Отчёты** | `EL-REPORT` (чертёж → HTML), `EL-PROJECT-REPORT` (папка DWG → сводный HTML), `EL-REVISION-DIFF` (текущий vs OMNI-ревизия), `EL-CHECK-REPORT` (дефектоскоп → md/html) |
 | **Топология** | `EL-TRACE`, `EL-PATH`, `EL-WHATIF`, `EL-TABLE`, `EL-GRAPH`, `EL-GRAPH-EXPORT` (Graphviz DOT/PNG) |
-| **Аудит** | `EL-CHECK`, `EL-CROSSING` (X-пересечения), `EL-LOOPS`, `EL-BOTTLENECK`, `EL-STATS`, `EL-COLOR-CHAINS` |
+| **Аудит** | `EL-CHECK`, `EL-CROSSING` (X-пересечения), `EL-LOOPS`, `EL-BOTTLENECK`, `EL-STATS`, `EL-COLOR-CHAINS`, `EL-HOTSPOTS` (тепловая карта плотности линий), `EL-CROSSREF` (ссылки «см. лист N») |
 | **Спецификации** | `AW33` (провода, длина × кол-во), `AW33-HTML`, `AW33-CSV`, `DrawWire`, `WireTable`, `WireNodes`, `WireSegAddr`, `WT` |
 | **Автоматизация** | `EL-JOIN` (LINE → полилинии), `EL-BOM`, `EL-TITLE` (штамп), `EL-SHEET-LIST` (реестр листов), `EL-XREF-LIST`, `EL-AUTOTAG` (номера цепей) |
 | **OMNI (версии)** | `OMNI-SNAP`, `OMNI-HISTORY`, `OMNI-ARCHIVE`, `OMNI-RESTORE`, `OMNI-LOG`, `OMNI-DIFF`, `OMNI-CLEAR`, `OMNI-TOGGLE`, `OMNI-NOTE` |
@@ -59,6 +59,21 @@ _OMNI_HISTORY\
 
 Почему так: полный слепок DWG — единственный формат, который открывается в любой версии AutoCAD и не зависит от плагина. Манифест с цепочкой даёт «кто, когда, что и не подменили ли»; ZIP — чтобы история не занимала диск (DWG сжимается в разы).
 
+## От LISP к плагину: покрытие
+
+В [el-tools](https://github.com/kostyk348/el-tools) и [omni](https://github.com/kostyk348/omni) было **26 команд** AutoLISP. В плагине все 26 имеют C#-реализацию:
+
+| LISP | В плагине |
+|---|---|
+| `AW`, `AW33`, `DrawWire`, `WireNodes`, `WireTable`, `WireSegAddr`, `WT` | `AW33`, `AW33-CSV`, `AW33-HTML`, `DrawWire`, `WireNodes`, `WireTable`, `WireSegAddr`, `WT` (+ отчёты) |
+| `EL-TRACE`, `EL-GRAPH`, `EL-TABLE`, `EL-WHATIF`, `EL-PATH` | одноимённые + `EL-GRAPH-EXPORT` (Graphviz) |
+| `EL-CHECK`, `EL-LOOPS`, `EL-BOTTLENECK`, `EL-STATS`, `EL-COLOR-CHAINS` | одноимённые + `EL-CHECK-REPORT`, `EL-CROSSING` |
+| `EL-HOTSPOTS`, `EL-CROSSREF` | перенесены в 1.9.0 (ядро `Hotspots`, `CrossReferences`) |
+| `EL-DIFF`, `EL-SAVE-SNAPSHOT` | заменены полноценной историей OMNI: `OMNI-SNAP`/`OMNI-HISTORY`/`OMNI-RESTORE`/`OMNI-DIFF`/`EL-REVISION-DIFF` |
+| `OMNI-SNAP/LOG/DIFF/CLEAR/TOGGLE/NOTE` | одноимённые + `OMNI-HISTORY`, `OMNI-ARCHIVE`, `OMNI-RESTORE` |
+
+Сверх LISP добавлено 26 команд: HTML/md-отчёты по чертежу и проекту, BOM, штамп, реестр листов, XREF-список, автонумерация цепей, слои (фильтры, легенда, перенос), палитра дефектов, лента, установщик.
+
 ## Надёжность: ничего не зависает
 
 У каждой потенциально тяжёлой операции есть верхняя граница — это проверяется тестами, а не обещаниями:
@@ -82,7 +97,7 @@ _OMNI_HISTORY\
 dotnet build src/El.Core/El.Core.csproj -c Release               # ядро (netstandard2.0 + net45)
 dotnet build src/El.Plugin/El.Plugin.csproj -c Release           # 2024 (net48)
 dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release -p:Acad2014Path="C:/refs/2014"   # 2014 (net45)
-dotnet run --project tests/El.Core.Tests                         # 63 теста
+dotnet run --project tests/El.Core.Tests                         # 72 теста
 ```
 
 Плагин собирается двумя способами: если AutoCAD установлен — против его DLL (`AcadPath`) с ILRepack в одну сборку; если нет (CI, новый компьютер) — против NuGet-пакета `AutoCAD.NET 24.3.0`, без установленного AutoCAD. Переключается автоматически, вручную — `-p:AcadLocal=true|false`.
