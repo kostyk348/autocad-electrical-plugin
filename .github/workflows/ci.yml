@@ -1,8 +1,7 @@
 name: CI
 
 on:
-  push:
-    branches: [master, main]
+  push:            # любая ветка: так видно состояние до мержа
   pull_request:
   workflow_dispatch:
 
