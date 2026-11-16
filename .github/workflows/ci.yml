@@ -86,3 +86,39 @@ jobs:
         with:
           name: El.Plugin.2027
           path: src/El.Plugin.2027/bin/Release/net10.0-windows/El.Plugin.dll
+
+  setup-exe:
+    name: Installer build (El.Tools.Setup.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Build the installer
+        run: dotnet build src/Setup/Setup.csproj -c Release --nologo
+
+      - name: Silent install into a temp folder, check the bundle and uninstall
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP "el-setup-check"
+          & src/Setup/bin/Release/net48/El.Tools.Setup.exe --silent --target $target
+          if ($LASTEXITCODE -ne 0) { throw "installer exited with $LASTEXITCODE" }
+          $manifests = Get-ChildItem -Recurse -Filter PackageContents.xml -Path $target
+          if ($manifests.Count -lt 1) { throw "no bundle installed" }
+          foreach ($m in $manifests) {
+            $xml = [xml](Get-Content $m.FullName)
+            if (!$xml.ApplicationPackage.Components.RuntimeRequirements.SeriesMin) { throw "no SeriesMin in $($m.FullName)" }
+          }
+          & src/Setup/bin/Release/net48/El.Tools.Setup.exe --silent --uninstall --target $target
+          if ($LASTEXITCODE -ne 0) { throw "uninstall exited with $LASTEXITCODE" }
+          $left = Get-ChildItem -Recurse -File -Path $target -ErrorAction SilentlyContinue
+          if ($left) { throw "files left after uninstall: $($left.Count)" }
+          Write-Host "installer ok: $($manifests.Count) bundle(s), clean uninstall"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: El.Tools.Setup
+          path: src/Setup/bin/Release/net48/El.Tools.Setup.exe

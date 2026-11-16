@@ -18,11 +18,26 @@
 
 ## Установка
 
-**Скачайте релиз** → распакуйте `El.Plugin.<версия>.installer.zip` → в AutoCAD: `NETLOAD` → выберите `El.Plugin.dll` → **Enter** на вопрос об автозагрузке → перезапуск AutoCAD. Плагин сам скопирует себя в `%APPDATA%\Autodesk\ApplicationPlugins\` (bundle).
+**Один файл, без NETLOAD:** скачайте `El.Tools.Setup.exe`, запустите, нажмите «Установить».
 
-Альтернатива: `El.Plugin.<версия>.bundle.zip` → распакуйте папку в `%APPDATA%\Autodesk\ApplicationPlugins\`.
+Что делает установщик:
 
-Версии: `El.Plugin.2024.*` (AutoCAD 2024), `El.Plugin.2014.*` (AutoCAD 2014, собрано против API из ISO).
+1. читает из реестра, какие версии AutoCAD установлены;
+2. выбирает подходящую сборку (2021–2024 → net48, 2027 → net10) и кладёт её в
+   `%APPDATA%\Autodesk\ApplicationPlugins\El.Plugin.<версия>.bundle\`;
+3. пишет запись в «Установка и удаление программ» — удаляется оттуда же одной кнопкой.
+
+AutoCAD подхватывает bundle из `ApplicationPlugins` при запуске сам: **NETLOAD не нужен**.
+Для тихой установки из скрипта: `El.Tools.Setup.exe --silent`, удаление — `El.Tools.Setup.exe --silent --uninstall`.
+
+Альтернативы (если Setup.exe не подходит):
+
+| Файл | Что делать |
+|---|---|
+| `El.Plugin.2024.bundle.zip` / `El.Plugin.2027.bundle.zip` | распаковать папку `*.bundle` в `%APPDATA%\Autodesk\ApplicationPlugins\` |
+| `El.Plugin.2024.installer.zip` / `El.Plugin.2027.installer.zip` | старый путь: `NETLOAD` → `El.Plugin.dll` → согласиться на автозагрузку |
+
+Сборки по версиям AutoCAD — в разделе «Сборка и тесты» (таблица ниже).
 
 ## Команды
 
