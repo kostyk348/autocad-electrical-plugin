@@ -104,16 +104,17 @@ jobs:
         shell: pwsh
         run: |
           $target = Join-Path $env:RUNNER_TEMP "el-setup-check"
-          & src/Setup/bin/Release/net48/El.Tools.Setup.exe --silent --target $target
-          if ($LASTEXITCODE -ne 0) { throw "installer exited with $LASTEXITCODE" }
+          $exe = (Resolve-Path "src/Setup/bin/Release/net48/El.Tools.Setup.exe").Path
+          $install = Start-Process -FilePath $exe -ArgumentList @("--silent", "--target", $target) -Wait -PassThru -NoNewWindow
+          if ($install.ExitCode -ne 0) { throw "installer exited with $($install.ExitCode)" }
           $manifests = Get-ChildItem -Recurse -Filter PackageContents.xml -Path $target
           if ($manifests.Count -lt 1) { throw "no bundle installed" }
           foreach ($m in $manifests) {
             $xml = [xml](Get-Content $m.FullName)
             if (!$xml.ApplicationPackage.Components.RuntimeRequirements.SeriesMin) { throw "no SeriesMin in $($m.FullName)" }
           }
-          & src/Setup/bin/Release/net48/El.Tools.Setup.exe --silent --uninstall --target $target
-          if ($LASTEXITCODE -ne 0) { throw "uninstall exited with $LASTEXITCODE" }
+          $remove = Start-Process -FilePath $exe -ArgumentList @("--silent", "--uninstall", "--target", $target) -Wait -PassThru -NoNewWindow
+          if ($remove.ExitCode -ne 0) { throw "uninstall exited with $($remove.ExitCode)" }
           $left = Get-ChildItem -Recurse -File -Path $target -ErrorAction SilentlyContinue
           if ($left) { throw "files left after uninstall: $($left.Count)" }
           Write-Host "installer ok: $($manifests.Count) bundle(s), clean uninstall"

@@ -52,6 +52,7 @@ namespace El.Setup
 
         private static int RunSilent(Options options)
         {
+            try { Console.OutputEncoding = Encoding.UTF8; } catch (IOException) { }
             var log = new StringBuilder();
             bool ok = options.Uninstall ? Installer.Uninstall(options.Target, log) : Installer.Install(options.Target, log);
             Console.Write(log.ToString());
