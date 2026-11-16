@@ -8,10 +8,24 @@
     <AssemblyName>El.Plugin</AssemblyName>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <PlatformTarget>x64</PlatformTarget>
+    <Version>1.9.0</Version>
+    <AssemblyVersion>1.9.0.0</AssemblyVersion>
+    <FileVersion>1.9.0.0</FileVersion>
+
+    <!-- Where the AutoCAD managed assemblies live. Only used when the folder exists. -->
     <AcadPath Condition="'$(AcadPath)' == ''">C:\Program Files\Autodesk\AutoCAD 2024</AcadPath>
-    <Version>1.8.0</Version>
-    <AssemblyVersion>1.8.0.0</AssemblyVersion>
-    <FileVersion>1.8.0.0</FileVersion>
+    <AcadLocal Condition="'$(AcadLocal)' == '' and Exists('$(AcadPath)\acmgd.dll')">true</AcadLocal>
+
+    <!--
+      Two ways to build:
+        * with a local AutoCAD install  -> references the DLLs from $(AcadPath) and ILRepacks
+          El.Core into one assembly (AcadLocal=true, the default on a workstation);
+        * without AutoCAD (CI, contributors) -> the same managed API comes from the NuGet
+          package AutoCAD.NET 24.3.0 (AutoCAD 2024 line), two DLLs instead of a merged one.
+      Both produce a loadable El.Plugin.dll for AutoCAD 2024.
+    -->
+    <AcadLocal Condition="'$(AcadLocal)' == ''">false</AcadLocal>
+    <UseAcadNuget Condition="'$(AcadLocal)' != 'true'">true</UseAcadNuget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,20 +38,14 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="AutoCAD.NET" Version="24.3.0" Condition="'$(UseAcadNuget)' == 'true'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\El.Core\El.Core.csproj" />
   </ItemGroup>
 
-  <!-- El.Core сливается в плагин (ILRepack): ОДНА сборка, без конфликтов версий -->
-  <Target Name="ILRepackMerge" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
-    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\..\tools\ilrepack\ILRepack.exe&quot; /lib:&quot;$(AcadPath)&quot; /internalize /target:library /out:&quot;$(TargetDir)$(AssemblyName).merged.dll&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)El.Core.dll&quot;" />
-    <Copy SourceFiles="$(TargetDir)$(AssemblyName).merged.dll" DestinationFiles="$(TargetPath)" OverwriteReadOnlyFiles="true" />
-    <Delete Files="$(TargetDir)$(AssemblyName).merged.dll" />
-  </Target>
-
-  <ItemGroup>
+  <ItemGroup Condition="'$(AcadLocal)' == 'true'">
     <Reference Include="acmgd">
       <HintPath>$(AcadPath)\acmgd.dll</HintPath>
       <Private>False</Private>
@@ -60,7 +68,15 @@
     </Reference>
   </ItemGroup>
 
-  <!-- копирование результата в папку bin\plugin при сборке -->
+  <!-- El.Core is merged into the plugin (ILRepack): ONE assembly, no version clashes. -->
+  <Target Name="ILRepackMerge" AfterTargets="Build"
+          Condition="'$(Configuration)'=='Release' and '$(AcadLocal)'=='true'">
+    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\..\tools\ilrepack\ILRepack.exe&quot; /lib:&quot;$(AcadPath)&quot; /internalize /target:library /out:&quot;$(TargetDir)$(AssemblyName).merged.dll&quot; &quot;$(TargetPath)&quot; &quot;$(TargetDir)El.Core.dll&quot;" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).merged.dll" DestinationFiles="$(TargetPath)" OverwriteReadOnlyFiles="true" />
+    <Delete Files="$(TargetDir)$(AssemblyName).merged.dll" />
+  </Target>
+
+  <!-- Copy the result into bin\plugin on a Release build -->
   <Target Name="CopyPlugin" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
     <Copy SourceFiles="$(TargetPath);$(TargetDir)El.Core.dll" DestinationFolder="$(MSBuildProjectDirectory)\..\..\bin\plugin" />
   </Target>

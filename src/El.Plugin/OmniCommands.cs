@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
+using El.Core;
 
 namespace El.Plugin
 {
@@ -15,7 +16,7 @@ namespace El.Plugin
     {
         private static Editor Ed => DwgAccess.Ed;
 
-        private static string HistoryDir()
+        internal static string HistoryDir()
         {
             var doc = DwgAccess.Doc;
             var db = doc.Database;
@@ -52,13 +53,27 @@ namespace El.Plugin
                 if (string.IsNullOrEmpty(src)) { Ed.WriteMessage("\n[OMNI] Файл не сохранён — сначала QSAVE."); return; }
                 db.SaveAs(src, true, DwgVersion.Current, db.SecurityParameters);
 
-                string date = DateTime.Now.ToString("yyyyMMdd.HHmmss");
-                string ms = DateTime.Now.Millisecond.ToString("000");
-                string user = Environment.UserName;
                 string dwgName = Path.GetFileName(src);
-                string backup = Path.Combine(HistoryDir(), $"{date}_{ms}_{user}_{msg}_{dwgName}");
+                var when = DateTime.Now;
+                // имя строится безопасно: сообщение пользователя не может выйти из папки истории
+                string name = Revisions.BuildSnapshotName(when, Environment.UserName, msg, dwgName);
+                string backup = Path.Combine(HistoryDir(), name);
                 File.Copy(src, backup);
-                Ed.WriteMessage($"\n[OMNI] Снимок сохранён: {backup}");
+                var entry = OmniHistoryCommands.RecordSnapshot(backup, Environment.UserName, msg ?? "", when);
+                Ed.WriteMessage($"\n[OMNI] Снимок сохранён: {name}");
+                if (entry != null)
+                    Ed.WriteMessage($"\n[OMNI] Ревизия записана в историю (sha256 {entry.Hash.Substring(0, 12)}…).");
+
+                // авто-сжатие: ограниченная порция, чтобы команда не задерживала редактор
+                var raw = OmniHistoryCommands.RawSnapshots();
+                if (raw.Count > Revisions.MaxRawSnapshotsKept)
+                {
+                    int archived;
+                    long freed;
+                    string summary = OmniHistoryCommands.Compact(Revisions.MaxRawSnapshotsKept, out archived, out freed);
+                    if (archived > 0)
+                        Ed.WriteMessage($"\n[OMNI] Авто-сжатие истории: {summary}.");
+                }
             }
             catch (System.Exception ex) { Ed.WriteMessage("\n[OMNI] SNAP: " + ex.Message); Plugin.Log(ex); }
         }

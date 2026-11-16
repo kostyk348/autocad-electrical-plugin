@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -95,6 +95,19 @@ namespace El.Plugin
 
         /// <summary>Писать ошибки в %TEMP%\el-plugin-errors.log (для диагностики на машине пользователя).
         /// Файл дописывается (append); при размере > 512 КБ — ротация в el-plugin-errors.old.log.</summary>
+        /// <summary>Одна строка в тот же лог, что и ошибки (для трассировки операций).</summary>
+        public static void LogText(string text)
+        {
+            try
+            {
+                RotateIfNeeded();
+                File.AppendAllText(LogPath,
+                    "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + text + Environment.NewLine,
+                    Encoding.UTF8);
+            }
+            catch { }
+        }
+
         public static void Log(System.Exception ex)
         {
             try
