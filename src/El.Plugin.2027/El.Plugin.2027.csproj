@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Сборка для AutoCAD 2027 (.NET 10): managed-API 26.0.0 собран под net10.0, серия R26.0. Исходники те же, что у сборки 2024 —
+    отдельный проект нужен только из-за смены платформы и пакета managed-API.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>El.Plugin</RootNamespace>
+    <AssemblyName>El.Plugin</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Version>1.12.0</Version>
+    <AssemblyVersion>1.12.0.0</AssemblyVersion>
+    <FileVersion>1.12.0.0</FileVersion>
+    <NoWarn>$(NoWarn);CA1416;MSB3277</NoWarn>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../El.Plugin/**/*.cs" />
+    <ProjectReference Include="../El.Core/El.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoCAD.NET" Version="26.0.0" />
+  </ItemGroup>
+
+</Project>
