@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Сборка для AutoCAD 2025/2026 (.NET 8). Исходники те же, что у сборки 2024 —
+    Сборка для AutoCAD 2026 (.NET 10): в managed-API 26.0.0 пакет собран под net10.0. Исходники те же, что у сборки 2024 —
     отдельный проект нужен только из-за смены платформы и пакета managed-API.
   -->
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
