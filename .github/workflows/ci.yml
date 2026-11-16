@@ -53,6 +53,11 @@ jobs:
           if ($missing.Count -gt 0) { throw "commands missing from the DLL: $($missing -join ', ')" }
           Write-Host "all $($expected.Count) commands present in $size bytes"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: El.Plugin.2024
+          path: src/El.Plugin/bin/Release/net48/El.Plugin.dll
+
   plugin-2026:
     name: Plugin build (AutoCAD 2026 API, .NET 10)
     runs-on: windows-latest
@@ -75,4 +80,9 @@ jobs:
           foreach ($c in @('OMNI-SNAP','OMNI-AUTOSNAP','OMNI-HISTORY','OMNI-RESTORE','EL-HOTSPOTS','EL-CROSSREF','AW33')) {
             if ($text -notmatch [regex]::Escape($c)) { throw "command $c missing" }
           }
-          Write-Host "ok: $($dll.Length) bytes" 
+          Write-Host "ok: $($dll.Length) bytes"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: El.Plugin.2026
+          path: src/El.Plugin.2026/bin/Release/net10.0-windows/El.Plugin.dll 
