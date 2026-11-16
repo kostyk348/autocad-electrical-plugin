@@ -33,7 +33,7 @@
 | **Аудит** | `EL-CHECK`, `EL-CROSSING` (X-пересечения), `EL-LOOPS`, `EL-BOTTLENECK`, `EL-STATS`, `EL-COLOR-CHAINS`, `EL-HOTSPOTS` (тепловая карта плотности линий), `EL-CROSSREF` (ссылки «см. лист N») |
 | **Спецификации** | `AW33` (провода, длина × кол-во), `AW33-HTML`, `AW33-CSV`, `DrawWire`, `WireTable`, `WireNodes`, `WireSegAddr`, `WT` |
 | **Автоматизация** | `EL-JOIN` (LINE → полилинии), `EL-BOM`, `EL-TITLE` (штамп), `EL-SHEET-LIST` (реестр листов), `EL-XREF-LIST`, `EL-AUTOTAG` (номера цепей) |
-| **OMNI (версии)** | `OMNI-SNAP`, `OMNI-HISTORY`, `OMNI-ARCHIVE`, `OMNI-RESTORE`, `OMNI-LOG`, `OMNI-DIFF`, `OMNI-CLEAR`, `OMNI-TOGGLE`, `OMNI-NOTE` |
+| **OMNI (версии)** | `OMNI-SNAP`, `OMNI-AUTOSNAP`, `OMNI-HISTORY`, `OMNI-ARCHIVE`, `OMNI-RESTORE`, `OMNI-LOG`, `OMNI-DIFF`, `OMNI-CLEAR`, `OMNI-TOGGLE`, `OMNI-NOTE` |
 
 Интерфейс: вкладка ленты **«Электроавтоматика»** (6 панелей), контекстные меню по типу объекта (LINE/TEXT/пусто), палитра `EL-PALETTE` (дефекты с зумом).
 
@@ -50,6 +50,7 @@ _OMNI_HISTORY\
 
 | Команда | Что делает |
 |---|---|
+| `OMNI-AUTOSNAP` | авто-слепки при каждом `QSAVE`/`SAVEAS`: не чаще раза в минуту и не больше 20 в час (состояние — `autosnap.state`, счётчики — маленькие файлы, O(1) на сохранение) |
 | `OMNI-SNAP` | слепок + запись в манифест (sha256 файла и цепочка `prev→next`); при переполнении — авто-сжатие |
 | `OMNI-HISTORY` | список ревизий и проверка целостности цепочки: если манифест правили руками, покажет запись, на которой цепочка рвётся |
 | `OMNI-ARCHIVE` | спросит, сколько последних слепков оставить распакованными, остальные упакует в `archive\ГГГГ-ММ.zip` и удалит оригиналы (после проверки, что запись в архиве есть) |
@@ -97,7 +98,7 @@ _OMNI_HISTORY\
 dotnet build src/El.Core/El.Core.csproj -c Release               # ядро (netstandard2.0 + net45)
 dotnet build src/El.Plugin/El.Plugin.csproj -c Release           # 2024 (net48)
 dotnet build src/El.Plugin.2014/El.Plugin.2014.csproj -c Release -p:Acad2014Path="C:/refs/2014"   # 2014 (net45)
-dotnet run --project tests/El.Core.Tests                         # 72 теста
+dotnet run --project tests/El.Core.Tests                         # 79 тестов
 ```
 
 Плагин собирается двумя способами: если AutoCAD установлен — против его DLL (`AcadPath`) с ILRepack в одну сборку; если нет (CI, новый компьютер) — против NuGet-пакета `AutoCAD.NET 24.3.0`, без установленного AutoCAD. Переключается автоматически, вручную — `-p:AcadLocal=true|false`.

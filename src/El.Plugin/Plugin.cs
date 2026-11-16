@@ -48,6 +48,9 @@ namespace El.Plugin
             }
             catch { }
 
+            try { OmniAutoSnap.Install(); }
+            catch (System.Exception autoEx) { Log(autoEx); }
+
             try
             {
                 Ribbon.Add();
@@ -83,6 +86,7 @@ namespace El.Plugin
 
         public void Terminate()
         {
+            try { OmniAutoSnap.Uninstall(); } catch { }
             try
             {
                 Ribbon.Remove();
