@@ -3,7 +3,7 @@
     AutodeskProduct="AutoCAD"
     Name="Electrical Tools (Электроавтоматика)"
     Description="Топология схем, аудит, спецификации AW33, провода с XData, OMNI-история ревизий (хеш-цепочка, сжатие, откат). Ribbon + контекстные меню + палитра."
-    AppVersion="1.11.0"
+    AppVersion="1.12.0"
     ProductType="Application"
     ProductCode="{066c4090-f8cf-4f6a-957a-56ed496d7f35}"
     UpgradeCode="{35771725-e194-4a6f-8132-0ea32a5cb5b5}">
