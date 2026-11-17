@@ -100,6 +100,17 @@ jobs:
       - name: Build the installer
         run: dotnet build src/Setup/Setup.csproj -c Release --nologo
 
+      - name: Диагностика установщика (--version, --list-payloads)
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "src/Setup/bin/Release/net48/El.Tools.Setup.exe").Path
+          $ver = & $exe --version
+          if ($ver -notmatch "Electrical Tools") { throw "--version ничего не вывел" }
+          Write-Host $ver
+          $list = & $exe --list-payloads
+          if ($list -notmatch "R24.0" -or $list -notmatch "R26.0") { throw "--list-payloads без серий" }
+          Write-Host $list
+
       - name: Silent install into a temp folder, check the bundle and uninstall
         shell: pwsh
         run: |

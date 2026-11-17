@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -29,6 +29,8 @@ namespace El.Setup
             var options = Options.Parse(args);
             try
             {
+                if (options.Version) return PrintVersion();
+                if (options.ListPayloads) return PrintPayloads();
                 if (options.Silent) return RunSilent(options);
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -50,6 +52,34 @@ namespace El.Setup
             }
         }
 
+        /// <summary>--version: версия установщика и состав встроенных сборок.</summary>
+        private static int PrintVersion()
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            var payloads = Installer.EmbeddedPayloads()
+                .Select(n => n.Replace("El.Plugin.", "").Replace(".dll", ""));
+            Console.WriteLine("Electrical Tools " + version + " (payloads: " + string.Join(", ", payloads) + ")");
+            return 0;
+        }
+
+        /// <summary>--list-payloads: какие линейки AutoCAD закрываются и что внутри.</summary>
+        private static int PrintPayloads()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            foreach (var name in Installer.EmbeddedPayloads())
+            {
+                string payload = name.Replace("El.Plugin.", "").Replace(".dll", "");
+                long size = 0;
+                using (var stream = asm.GetManifestResourceStream(name))
+                {
+                    if (stream != null) size = stream.Length;
+                }
+                Console.WriteLine(payload + "  series " + Installer.SeriesFor(payload) +
+                                  "  " + (size / 1024) + " KB");
+            }
+            return 0;
+        }
+
         private static int RunSilent(Options options)
         {
             try { Console.OutputEncoding = Encoding.UTF8; } catch (IOException) { }
@@ -65,6 +95,8 @@ namespace El.Setup
         public bool Silent;
         public bool Uninstall;
         public bool AllUsers;
+        public bool Version;
+        public bool ListPayloads;
         public string Target;   // переопределение каталога ApplicationPlugins (для тестов)
 
         public static Options Parse(string[] args)
@@ -79,6 +111,8 @@ namespace El.Setup
                     case "silent": case "s": case "quiet": case "q": o.Silent = true; break;
                     case "uninstall": case "remove": case "u": o.Uninstall = true; break;
                     case "allusers": case "all": o.AllUsers = true; break;
+                    case "version": case "v": o.Version = true; break;
+                    case "list-payloads": case "list": o.ListPayloads = true; break;
                     case "target":
                         if (i + 1 < args.Length) o.Target = args[++i];
                         break;
@@ -238,6 +272,12 @@ namespace El.Setup
                                    string.Join(", ", payloads));
             }
             return payloads;
+        }
+
+        /// <summary>Серии AutoCAD, которые закрывает сборка (единый источник правды).</summary>
+        internal static string SeriesFor(string payload)
+        {
+            return payload == "2024" ? "R24.0-R24.3 (2021-2024)" : "R26.0 (2027)";
         }
 
         internal static string Manifest(string payload)
